@@ -5,10 +5,10 @@ account: acrocode
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 7273509
-bundleId: 6391136
+bundleId: 6392349
 url: https://acrocode.shinyapps.io/PSO-App/
-when: 1665484607.92012
-lastSyncTime: 1665484607.92012
+when: 1665507575.54877
+lastSyncTime: 1665507575.54877
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: test_3D_plotly.R
+ignoredFiles: test_3D_plotly.R|test_3D_smoothing_PSO.R

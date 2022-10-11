@@ -12,6 +12,7 @@ shinyUI(fluidPage(
       numericRangeInput("range", "Definitionsbereich von x und y:", value = c(-10, 10), step = 0.1, separator = "bis"),
       numericInput("resolution", "Grid Resolution:", value=0.1),
       numericInput("iter", "Anzahl Iterationen:", value=20, step = 1),
+      checkboxInput("fast_plot", "Vereinfachter Plot:", value=T),
       actionButton("render", "Render Plot"),
       hr(),
       plotlyOutput("plot_3D", width="900px", height="900px")
