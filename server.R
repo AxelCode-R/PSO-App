@@ -13,6 +13,7 @@ shinyServer(function(input, output) {
       lower <- input$range[1]
       upper <- input$range[2]
       space <- upper-lower
+      max_iter <- input$iter
     })
 
     mrunif <- function(nr, nc, lower, upper) {
@@ -25,7 +26,7 @@ shinyServer(function(input, output) {
       s = 5, # swarm size
       c.p = 0.5, # inherit best
       c.g = 0.5, # global best
-      maxiter = 20, # iterations
+      maxiter = max_iter, # iterations
       w0 = 1.2, # starting inertia weight
       wN = 0.4 # ending inertia weight
     )
@@ -261,7 +262,8 @@ shinyServer(function(input, output) {
         yaxis=list(range=c(lower_min, upper_max), title="y"),
         zaxis=list(range=c(fit_min-fit_offset, fit_max+2*fit_offset), title="z (fitness)")#,
         #camera = list(eye=list(x=1,y=1,z=2))
-      ))
+      )) %>%
+        config(displayModeBar = FALSE)
 
     fig
   })
