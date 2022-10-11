@@ -40,7 +40,7 @@ X_fit <- apply(X, 2, fn)
 V <- mrunif(
   nr = length(par), nc=control$s,
   lower=-(upper-lower), upper=(upper-lower)
-)/10
+)/5
 
 P <- X
 P_fit <- X_fit
@@ -49,12 +49,19 @@ p_g_fit <- min(P_fit)
 
 
 save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
+save_V <- NULL
 for(i in 1:control$maxiter){
+  temp_save_V <- data.frame(
+    "iter" = i,
+    "id" = 1:nrow(X),
+    setNames(data.frame(t( (control$w0-(control$w0-control$wN)*i/control$maxiter) * V )), paste0("Vw_", 1:2)),
+    setNames(data.frame(t( control$c.p * runif(length(par)) * (P-X) ), paste0("Vp_", 1:2)),
+    setNames(data.frame(t( control$c.g * runif(length(par)) * (p_g-X) )), paste0("Vg_", 1:2))
+  )
+  save_V <- rbind(save_V, temp_save_V)
+
   # move particles
-  V <-
-    (control$w0-(control$w0-control$wN)*i/control$maxiter) * V +
-    control$c.p * runif(length(par)) * (P-X) +
-    control$c.g * runif(length(par)) * (p_g-X)
+  V <- temp_save_V$Vw + temp_save_V$Vp + temp_save_V$Vg
   X <- X + V
 
   # set velocity to zeros if not in valid space
@@ -90,6 +97,20 @@ grid <- grid %>% spread(., key = axis_2, value = fitness) %>% column_to_rownames
 
 
 
+X_anchors <- rbind(
+  save_X,
+  save_X %>% mutate(fitness=fitness+3)
+) %>%
+  group_by(id)
+
+X_velocitys <- rbind(
+  save_X %>% mutate(step=1),
+  save_X %>% mutate(iter = iter-1) %>% mutate(step=2)
+) %>% arrange(iter, id) %>% filter(iter >= min(save_X$iter), iter < max(save_X$iter))
+X_velocitys[X_velocitys$step==2,]$fitness <- X_velocitys[X_velocitys$step==1,]$fitness
+X_velocitys <- X_velocitys %>%
+  group_by(id)
+
 
 fig <- plot_ly() %>%
   add_surface(
@@ -107,7 +128,107 @@ fig <- plot_ly() %>%
     data=save_X,
     x=~axis_1,
     y=~axis_2,
+    z=~fitness+3,
+    color = ~id,
+    frame = ~iter,
+    mode ='markers',
+    type = 'scatter3d',
+    showlegend=F,
+    marker = list(color = 'red', size=6, showscale = F)
+  ) %>%
+  add_trace(
+    data = X_anchors,
+    x=~axis_1,
+    y=~axis_2,
     z=~fitness,
+    frame = ~iter,
+    mode ='lines',
+    type = 'scatter3d',
+    showlegend=F,
+    line = list(color = 'black', size=4, showscale = F)
+  )  %>%
+  add_trace(
+    data = X_velocitys,
+    x=~axis_1,
+    y=~axis_2,
+    z=~fitness+3,
+    frame = ~iter,
+    mode ='lines',
+    type = 'scatter3d',
+    showlegend=F,
+    line = list(color = 'red', size=4, showscale = F)
+  ) %>%
+  animation_opts(
+    redraw = T,
+    frame = 1000
+  )
+
+fig
+
+
+
+
+
+
+
+
+fig2 <- plotly_build(fig)
+
+iters <- unique(save_X$iter)
+ids <- unique(save_X$id)
+for(i in iters[iters!=max(iters)]){
+  anno <- list()
+  for(id in ids){
+    row <- save_X[save_X$iter==i & save_X$id==id, ]
+    row_next <- save_X[save_X$iter==i & save_X$id==id+1, ]
+    anno[[id]] <- list(
+      type="text",
+      x=row$axis_1,
+      y=row$axis_2,
+      z=row$fitness+3,
+      frame=i,
+      xref="paper",
+      yref="paper",
+      zref="paper",
+      showarrow = TRUE,
+      arrowhead = 4,
+      arrowsize = .5,
+      ax = row_next$axis_1,
+      ay = row_next$axis_2,
+      az = row$fitness+3,
+      text="v"
+    )
+  }
+  fig2$x$frames[[i+1]]$layout <- list(annotations = list(anno))
+}
+
+
+
+
+
+
+
+
+
+
+# save code:
+fig <- plot_ly() %>%
+  add_surface(
+    type = 'surface',
+    contours = list(
+      z = list(show = TRUE, start = round(min(grid)), end = round(max(grid)), size = round((max(grid)-min(grid))/10), color="grey")
+    ),
+    showscale = FALSE,
+    opacity=0.6,
+    x = rownames(grid),
+    y = colnames(grid),
+    z = grid
+  ) %>%
+  add_trace(
+    data=save_X,
+    x=~axis_1,
+    y=~axis_2,
+    z=~fitness+3,
     color = ~id,
     #split = ~id,
     frame = ~iter,
@@ -116,28 +237,38 @@ fig <- plot_ly() %>%
     showlegend=F,
     marker = list(color = 'red', size=4, showscale = F)
   ) %>%
+  add_trace(
+    data = X_anchors,
+    x=~axis_1,
+    y=~axis_2,
+    z=~fitness,
+    frame = ~iter,
+    mode ='lines',
+    type = 'scatter3d',
+    showlegend=F,
+    line = list(color = 'black', size=4, showscale = F)
+  ) %>%
   animation_opts(
     redraw = T,
     frame = 1000#,
     # transition = 1000,
     # easing = "linear"
   )# %>%
-  # add_annotations(
-  #   x=1,
-  #   y=1,
-  #   z=15,
-  #   frame=0,
-  #   xref="x",
-  #   yref="y",
-  #   showarrow = TRUE,
-  #   arrowhead = 4,
-  #   arrowsize = .5,
-  #   ax = 20,
-  #   ay = -40,
-  #   text="hi"
-  # )
-fig
-
+# add_annotations(
+#   x=1,
+#   y=1,
+#   z=15,
+#   frame=0,
+#   xref="x",
+#   yref="y",
+#   showarrow = TRUE,
+#   arrowhead = 4,
+#   arrowsize = .5,
+#   ax = 20,
+#   ay = -40,
+#   text="hi"
+# )
+#fig
 
 
 
@@ -147,6 +278,43 @@ fig
 
 
 fig2 <- plotly_build(fig)
+
+iters <- unique(save_X$iter)
+ids <- unique(save_X$id)
+for(i in iters){
+  anno <- list()
+  seg <- list()
+  for(id in ids){
+    row <- save_X[save_X$iter==i & save_X$id==id, ]
+
+    # anno[[id]] <- list(
+    #   type="text",
+    #   x=2,
+    #   y=2,
+    #   z=10,
+    #   frame=0,
+    #   xref="x",
+    #   yref="y",
+    #   showarrow = TRUE,
+    #   arrowhead = 4,
+    #   arrowsize = .5,
+    #   ax = 20,
+    #   ay = 10,
+    #   text="hi"
+    # )
+    seg[[id]] <- list(
+      x = row$axis_1,
+      y = row$axis_2,
+      z = row$fitness,
+      xend = row$axis_1,
+      yend = row$axis_2,
+      zend = row$fitness + 3,
+      size = I(5)
+    )
+  }
+  fig2$x$frames[[i+1]]$layout <- list(annotations = list(anno), segments = list(seg))
+}
+
 
 
 fig2$x$frames[[1]]$layout <- list(annotations = list(list(
