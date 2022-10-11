@@ -1,3 +1,8 @@
+# gute bsp:#
+# https://community.plotly.com/t/smooth-animation/49788
+
+
+
 library(plotly)
 library(dplyr)
 library(tidyr)
@@ -104,6 +109,7 @@ grid <- grid %>% spread(., key = axis_2, value = fitness) %>% column_to_rownames
 
 
 
+
 X_anchors <- rbind(
   save_X,
   save_X %>% mutate(fitness=fitness+3)
@@ -118,14 +124,7 @@ X_velocitys[X_velocitys$step==2,]$fitness <- X_velocitys[X_velocitys$step==1,]$f
 X_velocitys <- X_velocitys %>%
   group_by(id)
 
-#
-# Vw <- rbind(
-#   save_V %>% mutate(step=1),
-#   save_V %>% mutate(iter = iter-1) %>% mutate(step=2)
-# ) %>% arrange(iter, id) %>% filter(iter >= min(save_V$iter), iter < max(save_V$iter))
-# Vw[Vw$step==2,]$fitness <- Vw[Vw$step==1,]$fitness
-# Vw <- Vw %>%
-#   group_by(id)
+
 
 Vw <- rbind(
   save_X,
@@ -149,11 +148,13 @@ Vg <- rbind(
   group_by(id)
 
 
-fix_scale <- data.frame(
-  "x"=rep(c(-20, -20, 20, 20), 2),
-  "y"=rep(c(-20, 20, -20, 20), 2),
-  "z"=c(rep(0, 4), rep(25, 4))
-)
+# smoothing
+# for(i in 1:unique(save_X$iter)){
+#   if(i %% 10 != 0){
+#     row <- save_X[i%%10, ]
+#   }
+# }
+
 
 fig <- plot_ly() %>%
   add_surface(
