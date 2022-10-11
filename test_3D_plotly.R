@@ -51,17 +51,24 @@ p_g_fit <- min(P_fit)
 save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
 save_V <- NULL
 for(i in 1:control$maxiter){
-  temp_save_V <- data.frame(
-    "iter" = i,
-    "id" = 1:nrow(X),
-    setNames(data.frame(t( (control$w0-(control$w0-control$wN)*i/control$maxiter) * V )), paste0("Vw_", 1:2)),
-    setNames(data.frame(t( control$c.p * runif(length(par)) * (P-X) ), paste0("Vp_", 1:2)),
-    setNames(data.frame(t( control$c.g * runif(length(par)) * (p_g-X) )), paste0("Vg_", 1:2))
+  Vw <- (control$w0-(control$w0-control$wN)*i/control$maxiter) * V
+  Vp <- control$c.p * runif(length(par)) * (P-X)
+  Vg <- control$c.g * runif(length(par)) * (p_g-X)
+
+  save_V <- rbind(save_V,
+    cbind(
+      data.frame(
+        "iter" = i-1,
+        "id" = 1:ncol(X)
+      ),
+      setNames(data.frame(t( Vw )), paste0("Vw_", 1:2)),
+      setNames(data.frame(t( Vp )), paste0("Vp_", 1:2)),
+      setNames(data.frame(t( Vg )), paste0("Vg_", 1:2))
+    )
   )
-  save_V <- rbind(save_V, temp_save_V)
 
   # move particles
-  V <- temp_save_V$Vw + temp_save_V$Vp + temp_save_V$Vg
+  V <- Vw + Vp + Vg
   X <- X + V
 
   # set velocity to zeros if not in valid space
@@ -111,6 +118,42 @@ X_velocitys[X_velocitys$step==2,]$fitness <- X_velocitys[X_velocitys$step==1,]$f
 X_velocitys <- X_velocitys %>%
   group_by(id)
 
+#
+# Vw <- rbind(
+#   save_V %>% mutate(step=1),
+#   save_V %>% mutate(iter = iter-1) %>% mutate(step=2)
+# ) %>% arrange(iter, id) %>% filter(iter >= min(save_V$iter), iter < max(save_V$iter))
+# Vw[Vw$step==2,]$fitness <- Vw[Vw$step==1,]$fitness
+# Vw <- Vw %>%
+#   group_by(id)
+
+Vw <- rbind(
+  save_X,
+  save_X %>% left_join(., save_V, by=c("iter", "id")) %>% mutate(axis_1 = axis_1 + Vw_1, axis_2 = axis_2 + Vw_2) %>% select(colnames(save_X))
+) %>%
+  filter(iter < max(iter)) %>%
+  group_by(id)
+
+Vp <- rbind(
+  save_X,
+  save_X %>% left_join(., save_V, by=c("iter", "id")) %>% mutate(axis_1 = axis_1 + Vp_1, axis_2 = axis_2 + Vp_2) %>% select(colnames(save_X))
+) %>%
+  filter(iter < max(iter)) %>%
+  group_by(id)
+
+Vg <- rbind(
+  save_X,
+  save_X %>% left_join(., save_V, by=c("iter", "id")) %>% mutate(axis_1 = axis_1 + Vg_1, axis_2 = axis_2 + Vg_2) %>% select(colnames(save_X))
+) %>%
+  filter(iter < max(iter)) %>%
+  group_by(id)
+
+
+fix_scale <- data.frame(
+  "x"=rep(c(-20, -20, 20, 20), 2),
+  "y"=rep(c(-20, 20, -20, 20), 2),
+  "z"=c(rep(0, 4), rep(25, 4))
+)
 
 fig <- plot_ly() %>%
   add_surface(
@@ -155,13 +198,67 @@ fig <- plot_ly() %>%
     frame = ~iter,
     mode ='lines',
     type = 'scatter3d',
+    showlegend=T,
+    name = "V",
+    line = list(color = 'red', size=8, showscale = F)
+  ) %>%
+  add_trace(
+    data = Vw,
+    x=~axis_1,
+    y=~axis_2,
+    z=~fitness+3,
+    frame = ~iter,
+    mode ='lines',
+    type = 'scatter3d',
+    showlegend=T,
+    name = "V w",
+    line = list(color = 'blue', size=4, showscale = F)
+  ) %>%
+  add_trace(
+    data = Vp,
+    x=~axis_1,
+    y=~axis_2,
+    z=~fitness+3,
+    frame = ~iter,
+    mode ='lines',
+    type = 'scatter3d',
+    showlegend=T,
+    name = "V p",
+    line = list(color = 'green', size=4, showscale = F)
+  ) %>%
+  add_trace(
+    data = Vg,
+    x=~axis_1,
+    y=~axis_2,
+    z=~fitness+3,
+    frame = ~iter,
+    mode ='lines',
+    type = 'scatter3d',
+    showlegend=T,
+    name = "V g",
+    line = list(color = 'yellow', size=4, showscale = F)
+  ) %>%
+  add_trace(
+    x=rep(c(-20, -20, 20, 20), 2),
+    y=rep(c(-20, 20, -20, 20), 2),
+    z=c(rep(0, 4), rep(22, 4)),
+    #frame = sapply(unique(save_X$iter), function(x){rep(x,4)}) %>% as.vector(),
+    mode ='markers',
+    type = 'scatter3d',
     showlegend=F,
-    line = list(color = 'red', size=4, showscale = F)
+    marker = list(color = 'transparent', size=0, showscale = F),
+    hoverinfo="none"
   ) %>%
   animation_opts(
     redraw = T,
     frame = 1000
-  )
+  ) %>%
+  layout(scene = list(
+    xaxis=list(range=c(-20,20)),
+    yaxis=list(range=c(-20,20)),
+    zaxis=list(range=c(0,22))#,
+    #camera = list(eye=list(x=1,y=1,z=2))
+  ))
 
 fig
 
