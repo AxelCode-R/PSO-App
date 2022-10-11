@@ -233,13 +233,14 @@ for(i in 1:max(save_X$iter)){
 
 save_X <- save_X %>% arrange(iter, id, opacity)
 
-save_X$iter <- save_X$iter/smo$iter_stretch
-X_anchors$iter <- X_anchors$iter/smo$iter_stretch
+save_X$iter <- round(save_X$iter/smo$iter_stretch, 2)
+X_anchors$iter <- round(X_anchors$iter/smo$iter_stretch, 2)
+X_velocitys$iter <- round(X_velocitys$iter/smo$iter_stretch, 2)
+Vw$iter <- round(Vw$iter/smo$iter_stretch, 2)
+Vp$iter <- round(Vp$iter/smo$iter_stretch, 2)
+Vg$iter <- round(Vg$iter/smo$iter_stretch, 2)
 
-X_velocitys$iter <- X_velocitys$iter/smo$iter_stretch
-Vw$iter <- Vw$iter/smo$iter_stretch
-Vp$iter <- Vp$iter/smo$iter_stretch
-Vg$iter <- Vg$iter/smo$iter_stretch
+
 
 fig <- plot_ly() %>%
   add_surface(
