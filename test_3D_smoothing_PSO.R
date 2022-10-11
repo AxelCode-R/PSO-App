@@ -115,24 +115,26 @@ fit_offset <- fit_space*0.1
 
 # smoothing parameters
 smo <- list(
-  "iter_stretch" = 10,
-  "transition" = 6,
-  "frame_time" = 1000
+  "iter_stretch" = 12,
+  "transition" = 9,
+  "transition_downwards" = 3,
+  "frame_time" = 600
 )
 
 
 # pre smoothing
 save_X <- save_X %>% mutate(iter=iter*smo$iter_stretch)
+save_V <- save_V %>% mutate(iter=iter*smo$iter_stretch)
 
 X_anchors <- rbind(
-  save_X,
-  save_X %>% mutate(fitness=fitness+fit_offset)
+  save_X %>% mutate(step=1),
+  save_X %>% mutate(fitness=fitness+fit_offset, step=2)
 ) %>%
   group_by(id)
 
 X_velocitys <- rbind(
   save_X %>% mutate(step=1),
-  save_X %>% mutate(iter = iter-1) %>% mutate(step=2)
+  save_X %>% mutate(iter = iter-smo$iter_stretch) %>% mutate(step=2)
 ) %>% arrange(iter, id) %>% filter(iter >= min(save_X$iter), iter < max(save_X$iter))
 X_velocitys[X_velocitys$step==2,]$fitness <- X_velocitys[X_velocitys$step==1,]$fitness
 X_velocitys <- X_velocitys %>%
@@ -169,25 +171,75 @@ upper_max <- upper + 0.5*space
 save_X$opacity <- 1
 for(i in 1:max(save_X$iter)){
   if(i %% smo$iter_stretch != 0){
+
+    rows <- X_anchors[X_anchors$iter == floor(i/smo$iter_stretch)*smo$iter_stretch, ]
+    rows$iter <- i
+    X_anchors <- rbind(X_anchors, rows)
+
+
+    rows <- X_velocitys[X_velocitys$iter == floor(i/smo$iter_stretch)*smo$iter_stretch, ]
+    rows$iter <- i
+    X_velocitys <- rbind(X_velocitys, rows)
+
+
+    rows <- Vw[Vw$iter == floor(i/smo$iter_stretch)*smo$iter_stretch, ]
+    rows$iter <- i
+    Vw <- rbind(Vw, rows)
+
+
+    rows <- Vp[Vp$iter == floor(i/smo$iter_stretch)*smo$iter_stretch, ]
+    rows$iter <- i
+    Vp <- rbind(Vp, rows)
+
+
+    rows <- Vg[Vg$iter == floor(i/smo$iter_stretch)*smo$iter_stretch, ]
+    rows$iter <- i
+    Vg <- rbind(Vg, rows)
+
+
+
     rows <- save_X[save_X$iter == floor(i/smo$iter_stretch)*smo$iter_stretch,]
     rows_next <- save_X[save_X$iter == floor(i/smo$iter_stretch)*smo$iter_stretch+smo$iter_stretch,]
 
     skips <- smo$iter_stretch-smo$transition
     if(i %% smo$iter_stretch > skips){
       save_rows <- rows
-      save_rows$opacity <- 0.3
-      rows$axis_1 <- rows$axis_1 + (i - skips)/smo$transition * (rows_next$axis_1-rows$axis_1)
-      rows$axis_2 <- rows$axis_2 + (i - skips)/smo$transition * (rows_next$axis_2-rows$axis_2)
-      rows$fitness <- rows$fitness + (i - skips)/smo$transition * (rows_next$fitness-rows$fitness)
+
+      if( (i %% smo$iter_stretch - skips) < (smo$transition - smo$transition_downwards) ){
+        rows$axis_1 <- rows$axis_1 + (i %% smo$iter_stretch - skips)/(smo$transition - smo$transition_downwards) * (rows_next$axis_1-rows$axis_1)
+        rows$axis_2 <- rows$axis_2 + (i %% smo$iter_stretch - skips)/(smo$transition - smo$transition_downwards) * (rows_next$axis_2-rows$axis_2)
+      }else{
+        rows$axis_1 <- rows_next$axis_1
+        rows$axis_2 <- rows_next$axis_2
+        rows$fitness <- rows$fitness + (i %% smo$iter_stretch - skips - (smo$transition - smo$transition_downwards))/smo$transition_downwards * (rows_next$fitness-rows$fitness)
+
+        X_anchors[X_anchors$iter==i,]$axis_1 <- rep(rows$axis_1, 2)
+        X_anchors[X_anchors$iter==i,]$axis_2 <- rep(rows$axis_2, 2)
+        X_anchors[X_anchors$iter==i & X_anchors$step==1,]$fitness <- rows$fitness+fit_offset
+        X_anchors[X_anchors$iter==i & X_anchors$step==2,]$fitness <- rows_next$fitness
+      }
+      # rows$axis_1 <- rows$axis_1 + (i %% smo$iter_stretch - skips)/smo$transition * (rows_next$axis_1-rows$axis_1)
+      # rows$axis_2 <- rows$axis_2 + (i %% smo$iter_stretch- skips)/smo$transition * (rows_next$axis_2-rows$axis_2)
+      #rows$fitness <- rows$fitness + (i %% smo$iter_stretch- skips)/smo$transition * (rows_next$fitness-rows$fitness)
+      rows$opacity <- 0.2
       rows <- rbind(rows, save_rows)
     }
     rows$iter <- i
     save_X <- rbind(save_X, rows)
+
+
   }
 }
 
 save_X <- save_X %>% arrange(iter, id, opacity)
 
+save_X$iter <- save_X$iter/smo$iter_stretch
+X_anchors$iter <- X_anchors$iter/smo$iter_stretch
+
+X_velocitys$iter <- X_velocitys$iter/smo$iter_stretch
+Vw$iter <- Vw$iter/smo$iter_stretch
+Vp$iter <- Vp$iter/smo$iter_stretch
+Vg$iter <- Vg$iter/smo$iter_stretch
 
 fig <- plot_ly() %>%
   add_surface(
@@ -208,11 +260,10 @@ fig <- plot_ly() %>%
     z=~fitness+fit_offset,
     color = ~id,
     frame = ~iter,
-    opacity = ~opacity,
     mode ='markers',
     type = 'scatter3d',
     showlegend=F,
-    marker = list(color = 'red', size=6, showscale = F)
+    marker = list(color = 'red', size=~if_else(opacity==1, 20, 10), opacity = ~opacity, showscale = F, line=list(width=0))
   ) %>%
   add_trace(
     data = X_anchors,
@@ -290,9 +341,8 @@ fig <- plot_ly() %>%
   animation_opts(
     redraw = T,
     frame = smo$frame_time,
-    transition = 0,
-    easing = NULL,
-    mode="afterall"
+    transition = 100,
+    easing = NULL
   ) %>%
   layout(scene = list(
     xaxis=list(range=c(lower_min, upper_max), title="x"),
