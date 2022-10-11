@@ -4,11 +4,15 @@ shinyUI(fluidPage(
       h2("App zum visualisieren eines 2D PSOs"),
       hr(),
       br(),
-      textAreaInput("fun", "Die zu minimierende Funktion (x := pos[1]; y := pos[2]):", value="-20 * exp(-0.2 * sqrt(0.5 *((pos[1]-1)^2 + (pos[2]-1)^2))) -
-          exp(0.5*(cos(2*pi*pos[1]) + cos(2*pi*pos[2]))) +
-          exp(1) + 20"),
+      textAreaInput("fun",
+      "Die zu minimierende R-Funktion, die ein scalar zurückgibt (x := axis_1; y := axis_2):",
+      value="-20 * exp(-0.2 * sqrt(0.5 *((x-1)^2 + (y-1)^2))) -
+          exp(0.5*(cos(2*pi*x) + cos(2*pi*y))) +
+          exp(1) + 20", width=600, height=100),
+      numericRangeInput("range", "Definitionsbereich von x und y:", value = c(-10, 10), step = 0.1, separator = "bis"),
+      numericInput("resolution", "Grid Resolution:", value=0.1),
       actionButton("render", "Render Plot"),
       hr(),
-      addSpinner(plotlyOutput("plot_3D", width="900px", height="900px"))
+      plotlyOutput("plot_3D", width="900px", height="900px")
     )
 ))

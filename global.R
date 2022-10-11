@@ -4,4 +4,5 @@ library(tidyr)
 library(tidyverse)
 library(htmlwidgets)
 library(shiny)
+library(shinyWidgets)
 

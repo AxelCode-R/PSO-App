@@ -1,27 +1,26 @@
 
 shinyServer(function(input, output) {
 
-  r <- reactiveValues()
+  r <- reactiveValues(init=0)
 
   output$plot_3D <- renderPlotly({
     temp <- input$render
     req(input$render)
+
+    isolate({
+      resolution <- input$resolution
+      eval(parse(text = paste('fn <- function(pos) { \n x=pos[1] \n y=pos[2] \n return(' , input$fun , ')}', sep='')))
+      lower <- input$range[1]
+      upper <- input$range[2]
+      space <- upper-lower
+    })
 
     mrunif <- function(nr, nc, lower, upper) {
       return(matrix(runif(nr*nc,0,1),nrow=nr,ncol=nc)*(upper-lower)+lower)
     }
 
 
-    fn <- function(pos){
-      -20 * exp(-0.2 * sqrt(0.5 *((pos[1]-1)^2 + (pos[2]-1)^2))) -
-        exp(0.5*(cos(2*pi*pos[1]) + cos(2*pi*pos[2]))) +
-        exp(1) + 20
-    }
-
-
     par <- rep(NA, 2)
-    lower <- -10
-    upper <- 10
     control <- list(
       s = 5, # swarm size
       c.p = 0.5, # inherit best
@@ -99,15 +98,19 @@ shinyServer(function(input, output) {
 
 
 
-    grid <- setNames(expand.grid(seq(-10, 10, 0.1), seq(-10, 10, 0.1)), c("axis_1", "axis_2"))
+    grid <- setNames(expand.grid(seq(lower, upper, resolution), seq(lower, upper, resolution)), c("axis_1", "axis_2"))
     grid$fitness <- apply(grid, 1, fn)
     grid <- grid %>% spread(., key = axis_2, value = fitness) %>% column_to_rownames("axis_1") %>% as.matrix()
 
+    fit_max <- max(grid)
+    fit_min <- min(grid)
+    fit_space <- fit_max-fit_min
+    fit_offset <- fit_space*0.1
 
 
     X_anchors <- rbind(
       save_X,
-      save_X %>% mutate(fitness=fitness+3)
+      save_X %>% mutate(fitness=fitness+fit_offset)
     ) %>%
       group_by(id)
 
@@ -149,12 +152,8 @@ shinyServer(function(input, output) {
       filter(iter < max(iter)) %>%
       group_by(id)
 
-
-    fix_scale <- data.frame(
-      "x"=rep(c(-20, -20, 20, 20), 2),
-      "y"=rep(c(-20, 20, -20, 20), 2),
-      "z"=c(rep(0, 4), rep(25, 4))
-    )
+    lower_min <- lower - 0.5*space
+    upper_max <- upper + 0.5*space
 
     fig <- plot_ly() %>%
       add_surface(
@@ -172,7 +171,7 @@ shinyServer(function(input, output) {
         data=save_X,
         x=~axis_1,
         y=~axis_2,
-        z=~fitness+3,
+        z=~fitness+fit_offset,
         color = ~id,
         frame = ~iter,
         mode ='markers',
@@ -195,7 +194,7 @@ shinyServer(function(input, output) {
         data = X_velocitys,
         x=~axis_1,
         y=~axis_2,
-        z=~fitness+3,
+        z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
         type = 'scatter3d',
@@ -207,7 +206,7 @@ shinyServer(function(input, output) {
         data = Vw,
         x=~axis_1,
         y=~axis_2,
-        z=~fitness+3,
+        z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
         type = 'scatter3d',
@@ -219,7 +218,7 @@ shinyServer(function(input, output) {
         data = Vp,
         x=~axis_1,
         y=~axis_2,
-        z=~fitness+3,
+        z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
         type = 'scatter3d',
@@ -231,7 +230,7 @@ shinyServer(function(input, output) {
         data = Vg,
         x=~axis_1,
         y=~axis_2,
-        z=~fitness+3,
+        z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
         type = 'scatter3d',
@@ -240,10 +239,13 @@ shinyServer(function(input, output) {
         line = list(color = 'yellow', size=4, showscale = F)
       ) %>%
       add_trace(
-        x=rep(c(-20, -20, 20, 20), 2),
-        y=rep(c(-20, 20, -20, 20), 2),
-        z=c(rep(0, 4), rep(22, 4)),
+        # x=rep(c(-20, -20, 20, 20), 2),
+        # y=rep(c(-20, 20, -20, 20), 2),
+        # z=c(rep(0, 4), rep(22, 4)),
         #frame = sapply(unique(save_X$iter), function(x){rep(x,4)}) %>% as.vector(),
+        x=rep(c(lower_min, lower_min, upper_max, upper_max), 2),
+        y=rep(c(lower_min, upper_max, lower_min, upper_max), 2),
+        z=c(rep(fit_min-fit_offset, 4), rep(fit_max+2*fit_offset, 4)),
         mode ='markers',
         type = 'scatter3d',
         showlegend=F,
@@ -255,9 +257,9 @@ shinyServer(function(input, output) {
         frame = 1000
       ) %>%
       layout(scene = list(
-        xaxis=list(range=c(-20,20)),
-        yaxis=list(range=c(-20,20)),
-        zaxis=list(range=c(0,22))#,
+        xaxis=list(range=c(lower_min, upper_max), title="x"),
+        yaxis=list(range=c(lower_min, upper_max), title="y"),
+        zaxis=list(range=c(fit_min-fit_offset, fit_max+2*fit_offset), title="z (fitness)")#,
         #camera = list(eye=list(x=1,y=1,z=2))
       ))
 
