@@ -115,10 +115,10 @@ fit_offset <- fit_space*0.1
 
 # smoothing parameters
 smo <- list(
-  "iter_stretch" = 12,
-  "transition" = 9,
+  "iter_stretch" = 10,
+  "transition" = 8,
   "transition_downwards" = 3,
-  "frame_time" = 600
+  "frame_time" = 300
 )
 
 
