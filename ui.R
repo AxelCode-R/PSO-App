@@ -10,8 +10,9 @@ shinyUI(dashboardPage(
     )
   ),
   dashboardBody(
+    shinyjs::useShinyjs(),
     tabItems(
-      tabItem(tabName = "pso_2d",
+      tabItem(tabName = "home",
         home_ui()
       ),
       tabItem(tabName = "pso_2d",

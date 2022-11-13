@@ -7,6 +7,7 @@ library(shiny)
 library(shinyWidgets)
 library(shinydashboard)
 library(shinydashboardPlus)
+library(shinyjs)
 
 
 for(src in list.files("R/")){
