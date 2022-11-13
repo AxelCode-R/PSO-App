@@ -7,7 +7,7 @@ library(shiny)
 library(shinyWidgets)
 library(shinydashboard)
 library(shinydashboardPlus)
-library(fontawesome)
+
 
 for(src in list.files("R/")){
   source(paste0("R/", src))
