@@ -1,5 +1,5 @@
 pso_2d_server <- function(input, output, session){
-  r <- reactiveValues("fn"=NULL, "range"=NULL, "resolution"=NULL, "max_iter"=NULL, "grid"=NULL, "grid_plot"=NULL)
+  r <- reactiveValues("fn"=NULL, "range"=NULL, "resolution"=NULL, "max_iter"=NULL, "grid"=NULL, "grid_plot"=NULL, "save_X"=NULL)
 
   observeEvent(input$pso_2d_save_settings,{
     req(input$pso_2d_fun)
@@ -60,12 +60,17 @@ pso_2d_server <- function(input, output, session){
   observeEvent(input$pso_2d_start_pso, {
     req(r$grid_plot)
 
+    fn <- r$fn
+
+    lower <- r$range$lower
+    upper <- r$range$upper
+
     par <- rep(NA, 2)
     control <- list(
-      s = 5, # swarm size
+      s = 10, # swarm size
       c.p = 0.5, # inherit best
       c.g = 0.5, # global best
-      maxiter = max_iter, # iterations
+      maxiter = r$max_iter, # iterations
       w0 = 1.2, # starting inertia weight
       wN = 0.4 # ending inertia weight
     )
@@ -87,6 +92,8 @@ pso_2d_server <- function(input, output, session){
     p_g <- P[, which.min(P_fit)]
     p_g_fit <- min(P_fit)
 
+    lower_mat <- matrix(rep(lower, ncol(X)), ncol=ncol(X))
+    upper_mat <- matrix(rep(upper, ncol(X)), ncol=ncol(X))
 
     save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
     save_V <- NULL
@@ -116,8 +123,8 @@ pso_2d_server <- function(input, output, session){
       V[X < lower] <- 0
 
       # move into valid space
-      X[X > upper] <- upper
-      X[X < lower] <- lower
+      X[X > upper_mat] <- upper_mat[X > upper_mat]
+      X[X < lower_mat] <- lower_mat[X < lower_mat]
 
       # evaluate objective function
       X_fit <- apply(X, 2, fn)
@@ -135,6 +142,8 @@ pso_2d_server <- function(input, output, session){
 
       save_X <- rbind(save_X, data.frame("iter"=i, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X)))))
     }
+
+    r$save_X <- save_X
   })
 
 
