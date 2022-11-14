@@ -1,20 +1,24 @@
-
-shinyUI(fluidPage(
-    div(
-      h2("App zum visualisieren eines 2D PSOs"),
-      hr(),
-      br(),
-      textAreaInput("fun",
-      "Die zu minimierende R-Funktion mit x und y Koordinate:",
-      value="-20 * exp(-0.2 * sqrt(0.5 *((x-1)^2 + (y-1)^2))) -
-          exp(0.5*(cos(2*pi*x) + cos(2*pi*y))) +
-          exp(1) + 20", width=600, height=100),
-      numericRangeInput("range", "Definitionsbereich von x und y:", value = c(-10, 10), step = 0.1, separator = "bis"),
-      numericInput("resolution", "Grid Resolution:", value=0.1),
-      numericInput("iter", "Anzahl Iterationen:", value=20, step = 1),
-      checkboxInput("fast_plot", "Vereinfachter Plot:", value=T),
-      actionButton("render", "Render Plot"),
-      hr(),
-      plotlyOutput("plot_3D", width="900px", height="900px")
+shinyUI(dashboardPage(
+  title = "PSO App",
+  dashboardHeader(
+    title = "PSO App"
+  ),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Home", tabName = "home", icon = icon("home", verify_fa = FALSE)),
+      menuItem("PSO 2D", tabName = "pso_2d", icon = icon("gear", verify_fa = FALSE))
     )
+  ),
+  dashboardBody(
+    shinyjs::useShinyjs(),
+    tabItems(
+      tabItem(tabName = "home",
+        home_ui()
+      ),
+      tabItem(tabName = "pso_2d",
+        pso_2d_ui()
+      )
+    )
+  )
+
 ))
