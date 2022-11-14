@@ -49,7 +49,7 @@ pso_2d_server <- function(input, output, session){
   observeEvent(input$pso_2d_grid_preview, {
     showModal(modalDialog(
       title = NULL,
-      plotlyOutput("pso_2d_grid_plot"),
+      addSpinner(plotlyOutput("pso_2d_grid_plot")),
       easyClose = T,
       size = "xl",
       footer = NULL
