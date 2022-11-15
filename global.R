@@ -8,6 +8,7 @@ library(shinyWidgets)
 library(shinydashboard)
 library(shinydashboardPlus)
 library(shinyjs)
+library(RCurl)
 
 
 for(src in list.files("R/")){

@@ -153,8 +153,8 @@ pso_2d_server <- function(input, output, session){
 
     save_X <- r$save_X
     grid <- r$grid
-    save(save_X, grid, file="test.rdata")
-    browser()
+    # save(save_X, grid, file="test.rdata")
+    # browser()
 
     plot_ly(z = ~grid, type = "contour", y = rownames(grid), x = colnames(grid), showscale = F) %>%
       layout(
@@ -163,11 +163,6 @@ pso_2d_server <- function(input, output, session){
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
       html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
-
-
-    library('plotly')
-    library('htmlwidgets')
-    library('RCurl')
 
     image_file <- "img/p.png"
     txt <- RCurl::base64Encode(readBin(image_file, "raw", file.info(image_file)[1, "size"]), "txt")
@@ -183,15 +178,17 @@ pso_2d_server <- function(input, output, session){
         y=~axis_1,
         color = ~z,
         frame = ~iter,
+        text = ~fitness,
+        name = "",
         mode ='markers',
         type = 'scatter',
         showlegend=F,
         marker = list(color = 'red', size=10, opacity = 1, showscale = F)
       ) %>%
-      animation_opts(redraw=F, easing="quad") %>%
+      animation_opts(redraw=F, easing="cubic-in-out", transition = 500, frame = 700) %>%
       layout(
-        xaxis = list(gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
-        yaxis = list(gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
+        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
+        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
         images = list(
           list(
             # Add images
@@ -205,7 +202,7 @@ pso_2d_server <- function(input, output, session){
             sizing = "stretch",
             xanchor="left",
             yanchor="bottom",
-            opacity = 0.4,
+            opacity = 1,
             layer = "below"
           )
         )
