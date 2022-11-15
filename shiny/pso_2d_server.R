@@ -147,5 +147,71 @@ pso_2d_server <- function(input, output, session){
   })
 
 
+  output$pso_2d_pso_plot <- renderPlotly({
+    req(r$save_X)
+    req(r$grid)
+
+    save_X <- r$save_X
+    grid <- r$grid
+    save(save_X, grid, file="test.rdata")
+    browser()
+
+    plot_ly(z = ~grid, type = "contour", y = rownames(grid), x = colnames(grid), showscale = F) %>%
+      layout(
+        yaxis = list(showticklabels=FALSE, tickvals=""),
+        xaxis = list(showticklabels=FALSE, tickvals=""),
+        margin=list(r=0, b=0, l=0, t=0, pad=0)
+      ) %>%
+      html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
+
+
+    library('plotly')
+    library('htmlwidgets')
+    library('RCurl')
+
+    image_file <- "img/p.png"
+    txt <- RCurl::base64Encode(readBin(image_file, "raw", file.info(image_file)[1, "size"]), "txt")
+
+    save_X$z <- c(min(grid), rep(max(grid), nrow(save_X)-1))
+    plot_ly() %>%
+      # add_trace(
+      #   z = ~grid, type = "contour", x = rownames(grid), y = colnames(grid), frame=0:20, opacity=0.3
+      # ) %>%
+      add_trace(
+        data=save_X,
+        x=~axis_2,
+        y=~axis_1,
+        color = ~z,
+        frame = ~iter,
+        mode ='markers',
+        type = 'scatter',
+        showlegend=F,
+        marker = list(color = 'red', size=10, opacity = 1, showscale = F)
+      ) %>%
+      animation_opts(redraw=F, easing="quad") %>%
+      layout(
+        xaxis = list(gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
+        yaxis = list(gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
+        images = list(
+          list(
+            # Add images
+            source =  paste('data:image/png;base64', txt, sep=','),
+            xref = "x",
+            yref = "y",
+            y = min(as.numeric(rownames(grid))),
+            x = min(as.numeric(colnames(grid))),
+            sizey = max(as.numeric(rownames(grid)))-min(as.numeric(rownames(grid))),
+            sizex = max(as.numeric(colnames(grid)))-min(as.numeric(colnames(grid))),
+            sizing = "stretch",
+            xanchor="left",
+            yanchor="bottom",
+            opacity = 0.4,
+            layer = "below"
+          )
+        )
+      )
+
+
+  })
 
 }

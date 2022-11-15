@@ -18,7 +18,8 @@ pso_2d_ui <- function(){
       disabled(actionButton("pso_2d_grid_preview", "Grid Preview", style="margin-left:10px;"))
     ),
     div(
-      actionButton("pso_2d_start_pso", "Start PSO")
+      actionButton("pso_2d_start_pso", "Start PSO"),
+      plotlyOutput("pso_2d_pso_plot")
     )
   )
 }
