@@ -10,6 +10,7 @@ library(shinydashboardPlus)
 library(shinyjs)
 library(RCurl)
 
+options(scipen=999)
 
 for(src in list.files("R/")){
   source(paste0("R/", src))

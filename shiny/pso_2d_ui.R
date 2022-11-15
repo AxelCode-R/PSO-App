@@ -17,9 +17,13 @@ pso_2d_ui <- function(){
       actionButton("pso_2d_save_settings", "Save Settings"),
       disabled(actionButton("pso_2d_grid_preview", "Grid Preview", style="margin-left:10px;"))
     ),
+    br(),
     div(
       actionButton("pso_2d_start_pso", "Start PSO"),
-      plotlyOutput("pso_2d_pso_plot")
+      br(),
+      plotlyOutput("pso_2d_pso_plot_line", width=800, height=500),
+      br(),
+      plotlyOutput("pso_2d_pso_plot", width=800, height=800)
     )
   )
 }

@@ -147,6 +147,33 @@ pso_2d_server <- function(input, output, session){
   })
 
 
+  output$pso_2d_pso_plot_line <- renderPlotly({
+    req(r$save_X)
+
+    save_X <- r$save_X
+
+    temp <- save_X %>% group_by(iter) %>% filter(fitness==min(fitness)) %>% ungroup() %>% select(iter, fitness) %>% .[!duplicated(.$iter),]
+    temp_min <- temp[temp$iter==0,]$fitness
+    for(i in 1:max(temp$iter)){
+      if(temp_min < temp[temp$iter==i,]$fitness){
+        temp[temp$iter==i,]$fitness <- temp_min
+      }else{
+        temp_min <- temp[temp$iter==i,]$fitness
+      }
+    }
+    plot_ly(
+      data = temp,
+      x = ~iter,
+      y = ~fitness,
+      type = "scatter",
+      mode = "lines",
+      line = list(width=4)
+    ) %>%
+      layout(xaxis = list(tickformat = "digits")) %>%
+      config(displayModeBar = FALSE)
+  })
+
+
   output$pso_2d_pso_plot <- renderPlotly({
     req(r$save_X)
     req(r$grid)
@@ -206,7 +233,8 @@ pso_2d_server <- function(input, output, session){
             layer = "below"
           )
         )
-      )
+      ) %>%
+      config(displayModeBar = FALSE)
 
 
   })
