@@ -19,9 +19,17 @@ pso_2d_server <- function(input, output, session){
     grid$fitness <- apply(grid, 1, r$fn)
     r$grid <- grid %>% spread(., key = x2, value = fitness) %>% column_to_rownames("x1") %>% as.matrix()
 
+    enable("pso_2d_grid_preview")
+  })
+
+
+
+  output$pso_2d_grid_plot <- renderPlotly({
+    req(r$grid)
+
     dim_z <- max(r$grid)-min(r$grid)
 
-    r$grid_plot <- plot_ly() %>%
+    plot_ly() %>%
       add_surface(
         type = 'surface',
         contours = list(
@@ -36,15 +44,9 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       layout(scene = list(xaxis=list(title="x1"), yaxis=list(title="x2"))) %>%
       config(displayModeBar = FALSE)
+  }) %>%
+    bindEvent(input$pso_2d_grid_preview)
 
-    enable("pso_2d_grid_preview")
-  })
-
-
-  output$pso_2d_grid_plot <- renderPlotly({
-    req(r$grid_plot)
-    r$grid_plot
-  })
 
   observeEvent(input$pso_2d_grid_preview, {
     showModal(modalDialog(
@@ -58,22 +60,24 @@ pso_2d_server <- function(input, output, session){
 
 
   observeEvent(input$pso_2d_start_pso, {
-    req(r$grid_plot)
+    req(r$grid)
 
-    fn <- r$fn
+    isolate({
+      fn <- r$fn
 
-    lower <- r$range$lower
-    upper <- r$range$upper
+      lower <- r$range$lower
+      upper <- r$range$upper
 
-    par <- rep(NA, 2)
-    control <- list(
-      s = 10, # swarm size
-      c.p = 0.5, # inherit best
-      c.g = 0.5, # global best
-      maxiter = r$max_iter, # iterations
-      w0 = 1.2, # starting inertia weight
-      wN = 0.4 # ending inertia weight
-    )
+      par <- rep(NA, 2)
+      control <- list(
+        s = 10, # swarm size
+        c.p = 0.5, # inherit best
+        c.g = 0.5, # global best
+        maxiter = r$max_iter, # iterations
+        w0 = 1.2, # starting inertia weight
+        wN = 0.4 # ending inertia weight
+      )
+    })
 
     X <- mrunif(
       nr = length(par), nc=control$s, lower=lower, upper=upper
@@ -144,7 +148,8 @@ pso_2d_server <- function(input, output, session){
     }
 
     r$save_X <- save_X
-  })
+  }) %>%
+    bindEvent(input$pso_2d_start_pso)
 
 
   output$pso_2d_pso_plot_line <- renderPlotly({
@@ -174,12 +179,14 @@ pso_2d_server <- function(input, output, session){
   })
 
 
+
   output$pso_2d_pso_plot <- renderPlotly({
     req(r$save_X)
     req(r$grid)
 
     save_X <- r$save_X
     grid <- r$grid
+
     # save(save_X, grid, file="test.rdata")
     # browser()
 
@@ -236,7 +243,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       config(displayModeBar = FALSE)
 
+  }) %>%
+    bindEvent(input$pso_2d_render_anim)
 
-  })
 
 }
