@@ -70,12 +70,12 @@ pso_2d_server <- function(input, output, session){
 
       par <- rep(NA, 2)
       control <- list(
-        s = 10, # swarm size
-        c.p = 0.5, # inherit best
-        c.g = 0.5, # global best
+        s = input$pso_2d_s, # swarm size
+        c.p = input$pso_2d_coef_p, # inherit best
+        c.g = input$pso_2d_coef_g, # global best
         maxiter = r$max_iter, # iterations
-        w0 = 1.2, # starting inertia weight
-        wN = 0.4 # ending inertia weight
+        w0 = input$pso_2d_inertia_weight_w0, # starting inertia weight
+        wN = input$pso_2d_inertia_weight_wN # ending inertia weight
       )
     })
 
@@ -89,7 +89,7 @@ pso_2d_server <- function(input, output, session){
     V <- mrunif(
       nr = length(par), nc=control$s,
       lower=-(upper-lower), upper=(upper-lower)
-    )/5
+    )/10
 
     P <- X
     P_fit <- X_fit
@@ -148,8 +148,8 @@ pso_2d_server <- function(input, output, session){
     }
 
     r$save_X <- save_X
-  }) %>%
-    bindEvent(input$pso_2d_start_pso)
+  }) #%>%
+    #bindEvent(input$pso_2d_start_pso)
 
 
   output$pso_2d_pso_plot_line <- renderPlotly({
