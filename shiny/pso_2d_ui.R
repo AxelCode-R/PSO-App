@@ -13,7 +13,8 @@ pso_2d_ui <- function(){
       numericRangeInput("pso_2d_range_x1", "Domain of x1:", value = c(-10, 10), step = 0.1, separator = "-"),
       numericRangeInput("pso_2d_range_x2", "Domain of x2:", value = c(-10, 10), step = 0.1, separator = "-"),
       numericInput("pso_2d_resolution", "Grid Resolution:", value = 200, max = 2000, min = 100),
-      div(style="width:300px", progressBar(id = "pso_2d_settings", value = 0, total = 100, unit_mark="%", range_value=NULL)),
+      #div(style="width:300px", progressBar(id = "pso_2d_settings", value = 0, total = 100, unit_mark="%", range_value=NULL)),
+      div(style="width:300px",fluidRow(column(12,progressBar(id = "pso_2d_settings1", value = 0, display_pct = T)))),
       actionButton("pso_2d_save_settings", "Save Settings"),
       disabled(actionButton("pso_2d_grid_preview", "Grid Preview", style="margin-left:10px;"))
     ),
@@ -29,6 +30,7 @@ pso_2d_ui <- function(){
       ),
       numericInput("pso_2d_coef_p", "C_p:", value=0.5, step = 0.1),
       numericInput("pso_2d_coef_g", "C_g:", value=0.5, step = 0.1),
+      div(style="width:300px",fluidRow(column(12,progressBar(id = "pso_2d_settings2", value = 0, display_pct = T)))),
       actionButton("pso_2d_start_pso", "Start PSO"),
       br(),
       plotlyOutput("pso_2d_pso_plot_line", width=800, height=500),
@@ -36,7 +38,14 @@ pso_2d_ui <- function(){
     hr(),
     div(
       actionButton("pso_2d_render_anim", "Render 2D-PSO Animation"),
+      div(style="width:300px",fluidRow(column(12,progressBar(id = "pso_2d_settings3", value = 0, display_pct = T)))),
       plotlyOutput("pso_2d_pso_plot", width=800, height=800)
+    ),
+    hr(),
+    div(
+      actionButton("pso_2d_render_anim_details", "Render 2D-PSO Animation with Details"),
+      div(style="width:300px",fluidRow(column(12,progressBar(id = "pso_2d_settings4", value = 0, display_pct = T)))),
+      plotlyOutput("pso_2d_pso_plot_details", width=800, height=800)
     )
   )
 }
