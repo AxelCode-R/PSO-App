@@ -11,6 +11,9 @@ shinyUI(dashboardPage(
   ),
   dashboardBody(
     shinyjs::useShinyjs(),
+    tags$head(
+      tags$link(rel = "stylesheet", type = "text/css", href = "www/bootstrap.css")
+    ),
     tabItems(
       tabItem(tabName = "home",
         home_ui()

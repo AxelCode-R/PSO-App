@@ -13,6 +13,7 @@ pso_2d_ui <- function(){
       numericRangeInput("pso_2d_range_x1", "Domain of x1:", value = c(-10, 10), step = 0.1, separator = "-"),
       numericRangeInput("pso_2d_range_x2", "Domain of x2:", value = c(-10, 10), step = 0.1, separator = "-"),
       numericInput("pso_2d_resolution", "Grid Resolution:", value = 200, max = 2000, min = 100),
+      div(style="width:300px", progressBar(id = "pso_2d_settings", value = 0, total = 100, unit_mark="%", range_value=NULL)),
       actionButton("pso_2d_save_settings", "Save Settings"),
       disabled(actionButton("pso_2d_grid_preview", "Grid Preview", style="margin-left:10px;"))
     ),
