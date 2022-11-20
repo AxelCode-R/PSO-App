@@ -1,12 +1,32 @@
 pso_2d_ui <- function(){
   div(
+    div(style="display:box",
+      p("Sources for Test Problems:"),
+      tags$a(href="https://www.sfu.ca/~ssurjano/optimization.html", "Optimization Test Problems"),
+      br(),
+      br(),
+      tags$a(href="https://en.wikipedia.org/wiki/Test_functions_for_optimization", "Constrained Optimization Test Problems"),
+    ),
+    div(style="display:box",
+      actionButton("pso_2d_fun_drop_wave", "DROP-WAVE"),
+      actionButton("pso_2d_fun_ackley", "ACKLEY"),
+      actionButton("pso_2d_fun_rosenbrock", "Rosenbrock constraint cubic and line"),
+      actionButton("pso_2d_fun_gole", "Gomez and Levy constraint")
+    ),
     div(
       textAreaInput(
-        "pso_2d_fun",
+        "pso_2d_fun_fit",
         "R Function to Minimize (with x1 and x2 variables):",
          value="-20 * exp(-0.2 * sqrt(0.5 *((x1-1)^2 + (x2-1)^2))) -
               exp(0.5*(cos(2*pi*x1) + cos(2*pi*x2))) +
               exp(1) + 20",
+        width=600,
+        height=100
+      ),
+      textAreaInput(
+        "pso_2d_fun_const",
+        "Penalty Constraint R Function (with x1 and x2 variables):",
+        value="0",
         width=600,
         height=100
       ),
@@ -37,14 +57,14 @@ pso_2d_ui <- function(){
     ),
     hr(),
     div(
-      actionButton("pso_2d_render_anim", "Render 2D-PSO Animation"),
       div(style="width:300px",fluidRow(column(12,progressBar(id = "pso_2d_settings3", value = 0, display_pct = T)))),
+      actionButton("pso_2d_render_anim", "Render 2D-PSO Animation"),
       plotlyOutput("pso_2d_pso_plot", width=800, height=800)
     ),
     hr(),
     div(
-      actionButton("pso_2d_render_anim_details", "Render 2D-PSO Animation with Details"),
       div(style="width:300px",fluidRow(column(12,progressBar(id = "pso_2d_settings4", value = 0, display_pct = T)))),
+      actionButton("pso_2d_render_anim_details", "Render 2D-PSO Animation with Details"),
       plotlyOutput("pso_2d_pso_plot_details", width=800, height=800)
     )
   )

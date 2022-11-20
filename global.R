@@ -7,6 +7,8 @@ library(shiny)
 library(shinyWidgets)
 library(shinydashboard)
 library(shinydashboardPlus)
+library(pagedown)
+library(webshot2)
 library(shinyjs)
 library(RCurl)
 
@@ -18,3 +20,5 @@ for(src in list.files("R/")){
 for(src in list.files("shiny/")){
   source(paste0("shiny/", src))
 }
+
+#https://community.rstudio.com/t/how-to-properly-configure-google-chrome-on-shinyapps-io-because-of-webshot2/109020

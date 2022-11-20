@@ -1,5 +1,5 @@
 pso_2d_server <- function(input, output, session){
-  r <- reactiveValues("fn"=NULL, "range"=NULL, "resolution"=NULL, "max_iter"=NULL, "grid"=NULL, "grid_plot"=NULL, "save_X"=NULL)
+  r <- reactiveValues("fn"=NULL, "range"=NULL, "resolution"=NULL, "max_iter"=NULL, "grid"=NULL, "grid_plot"=NULL, "save_X"=NULL, "reverse"=FALSE)
 
   observe({
     updateProgressBar(session = session, id = "pso_2d_settings1", value = 0)
@@ -10,37 +10,90 @@ pso_2d_server <- function(input, output, session){
     bindEvent(input$pso_2d_fun, input$pso_2d_range_x1, input$pso_2d_range_x2, input$pso_2d_resolution)
 
 
+
+  observeEvent(input$pso_2d_fun_drop_wave,{
+    updateTextAreaInput(session, "pso_2d_fun_fit", value="-(1+cos(12*sqrt(x1^2+x2^2)))/(0.5*(x1^2+x2^2)+2)")
+    updateTextAreaInput(session, "pso_2d_fun_const", value="0")
+    updateNumericRangeInput(session, "pso_2d_range_x1", value=c(-5.12, 5.12))
+    updateNumericRangeInput(session, "pso_2d_range_x2", value=c(-5.12, 5.12))
+  })
+
+  observeEvent(input$pso_2d_fun_ackley,{
+    updateTextAreaInput(session, "pso_2d_fun_fit", value="-20*exp(-0.2*sqrt(0.5*(x1^2+x2^2)))-
+                        exp(0.5*(cos(2*pi*x1)+cos(2*pi*x2)))+
+                        exp(1)+20")
+    updateTextAreaInput(session, "pso_2d_fun_const", value="0")
+    updateNumericRangeInput(session, "pso_2d_range_x1", value=c(-32.768, 32.768))
+    updateNumericRangeInput(session, "pso_2d_range_x2", value=c(-32.768, 32.768))
+  })
+
+  observeEvent(input$pso_2d_fun_rosenbrock,{
+    updateTextAreaInput(session, "pso_2d_fun_fit",
+                        value="(1-x1)^2+100*(x2-x1^2)^2")
+    updateTextAreaInput(session, "pso_2d_fun_const", value="if(((x1-1)^3-x2+1)>0){((x1-1)^3-x2+1)*100}else{0} +
+                        if((x1+x2-2)>0){(x1+x2-2)*100}else{0}")
+    updateNumericRangeInput(session, "pso_2d_range_x1", value=c(-1.5, 1.5))
+    updateNumericRangeInput(session, "pso_2d_range_x2", value=c(-0.5, 2.5))
+  })
+
+
+  observeEvent(input$pso_2d_fun_gole,{
+    updateTextAreaInput(session, "pso_2d_fun_fit",
+                        value="4*x1^2-2.1*x1^4+1/3*x1^6+x1*x2-4*x2^2+4*x2^4")
+    updateTextAreaInput(session, "pso_2d_fun_const", value="if((-sin(4*pi*x1)+2*sin(2*pi*x2)^2)>1.5){(-sin(4*pi*x1)+2*sin(2*pi*x2)^2)}else{0}")
+    updateNumericRangeInput(session, "pso_2d_range_x1", value=c(-1, 0.75))
+    updateNumericRangeInput(session, "pso_2d_range_x2", value=c(-1, 1))
+  })
+
+
+
   observeEvent(input$pso_2d_save_settings,{
-    req(input$pso_2d_fun)
+    req(input$pso_2d_fun_fit)
+    req(input$pso_2d_fun_const)
+
 
     updateProgressBar(session = session, id = "pso_2d_settings1", value = 20)
     disable("pso_2d_grid_preview")
-    worked <- tryCatch(
+    worked1 <- tryCatch(
       {
-        eval(parse(text = paste('fn <- function(x) {return(' , gsub("x2", "x[2]",gsub("x1", "x[1]", input$pso_2d_fun)) , ')}', sep='')))
+        eval(parse(text = paste('fn_fit <- function(x) {return(' , gsub("x2", "x[2]",gsub("x1", "x[1]", input$pso_2d_fun_fit)) , ')}', sep='')))
         TRUE
       },
       error = function(e) showNotification(session, "some error accured by reading the function!")
     )
-    if(worked){
+    worked2 <- tryCatch(
+      {
+        eval(parse(text = paste('fn_const <- function(x) {return(' , gsub("x2", "x[2]",gsub("x1", "x[1]", input$pso_2d_fun_const)) , ')}', sep='')))
+        TRUE
+      },
+      error = function(e) showNotification(session, "some error accured by reading the function!")
+    )
+    worked3 <- tryCatch(
+      {
+        eval(parse(text = paste('fn <- function(x) {return(' , gsub("x2", "x[2]",gsub("x1", "x[1]", input$pso_2d_fun_fit)), "+1000*", gsub("x2", "x[2]",gsub("x1", "x[1]", input$pso_2d_fun_const)), ')}', sep='')))
+        TRUE
+      },
+      error = function(e) showNotification(session, "some error accured by reading the function!")
+    )
+    if(worked1 && worked2 && worked3){
+      r$fn_fit <- fn_fit
+      r$fn_const <- fn_const
       r$fn <- fn
       r$range <- data.frame(
         lower = c(input$pso_2d_range_x1[1], input$pso_2d_range_x2[1]),
         upper = c(input$pso_2d_range_x1[2], input$pso_2d_range_x2[2])
       )
       r$resolution <- input$pso_2d_resolution
-      r$max_iter <- input$pso_2d_iter
-      #browser()
+
 
       updateProgressBar(session = session, id = "pso_2d_settings1", value = 40)
 
       grid <- setNames(expand.grid(seq(r$range$lower[1], r$range$upper[1], length.out = r$resolution), seq(r$range$lower[2], r$range$upper[2], length.out = r$resolution)), c("x1", "x2"))
       updateProgressBar(session = session, id = "pso_2d_settings1", value = 60)
-      grid$fitness <- apply(grid, 1, r$fn)
+      grid$fitness <- apply(grid, 1, function(x){if(r$fn_const(x)==0){r$fn_fit(x)}else{NA}})
       updateProgressBar(session = session, id = "pso_2d_settings1", value = 80)
-      r$grid <- grid %>% spread(., key = x2, value = fitness) %>% column_to_rownames("x1") %>% as.matrix()
+      r$grid <- grid %>% spread(., key = x1, value = fitness) %>% column_to_rownames("x2") %>% as.matrix()
     }
-
 
     updateProgressBar(session = session, id = "pso_2d_settings1", value = 100)
     enable("pso_2d_grid_preview")
@@ -51,30 +104,88 @@ pso_2d_server <- function(input, output, session){
   output$pso_2d_grid_plot <- renderPlotly({
     req(r$grid)
 
-    dim_z <- max(r$grid)-min(r$grid)
 
+    #dim_z <- max(r$grid)-min(r$grid)
+    #grid <- r$grid
+
+    # plot_ly() %>%
+    #   add_surface(
+    #     data = grid,
+    #     type = 'surface',
+    #     # contours = list(
+    #     #   z = list(show = TRUE, start = min(r$grid)-0.03*dim_z, end = round(max(r$grid))+0.03*dim_z, size = round(dim_z/10), color="grey", opacity = 0.2)
+    #     # ),
+    #     showscale = FALSE,
+    #     opacity=0.7,
+    #     x = ~x1,
+    #     y = ~x2,
+    #     z = ~fitness,
+    #     inherit = F
+    #   ) %>%
+    #   layout(scene = list(
+    #     xaxis=list(title="x1"),
+    #     yaxis=list(title="x2")
+    #   )) %>%
+    #   config(displayModeBar = FALSE)
+
+
+    # x <- as.numeric(rownames(r$grid))
+    # y <- as.numeric(colnames(r$grid))
+    # z <- as.matrix(r$grid) #if(r$reverse){t(r$grid)}else{r$grid}
+    # colnames(z) <- NULL
+    # rownames(z) <- NULL
+    # plot_ly() %>%
+    #   add_surface(
+    #     type = 'surface',
+    #     # contours = list(
+    #     #   z = list(show = TRUE, start = min(r$grid)-0.03*dim_z, end = round(max(r$grid))+0.03*dim_z, size = round(dim_z/10), color="grey", opacity = 0.2)
+    #     # ),
+    #     showscale = FALSE,
+    #     opacity=0.7,
+    #     x = ~x,
+    #     y = ~y,
+    #     z = ~z,
+    #     inherit = T
+    #   ) %>%
+    #   layout(scene = list(
+    #     xaxis=list(title="x1", range=c(min(as.numeric(rownames(r$grid))), max(as.numeric(rownames(r$grid)))), autorange="reversed" ),
+    #     yaxis=list(title="x2", range=c(min(as.numeric(colnames(r$grid))), max(as.numeric(colnames(r$grid)))), autorange="reversed" )
+    #   )) %>%
+    #   config(displayModeBar = FALSE)
+
+
+
+    # x <- as.numeric(rownames(r$grid))
+    # y <- as.numeric(colnames(r$grid))
+    # z <- as.matrix(r$grid) #if(r$reverse){t(r$grid)}else{r$grid}
+    # colnames(z) <- NULL
+    # rownames(z) <- NULL
     plot_ly() %>%
       add_surface(
         type = 'surface',
-        contours = list(
-          z = list(show = TRUE, start = min(r$grid)-0.03*dim_z, end = round(max(r$grid))+0.03*dim_z, size = round(dim_z/10), color="grey", opacity = 0.7)
-        ),
+        # contours = list(
+        #   z = list(show = T, usecolormap=T, project=list(z=TRUE))
+        # ),
         showscale = FALSE,
         opacity=0.7,
-        x = rownames(r$grid),
-        y = colnames(r$grid),
+        x = as.numeric(colnames(r$grid)),
+        y = as.numeric(rownames(r$grid)),
         z = r$grid,
-        inherit = F
+        inherit = T
       ) %>%
-      layout(scene = list(xaxis=list(title="x1"), yaxis=list(title="x2"))) %>%
+      layout(scene = list(
+        xaxis=list(title="x1"),
+        yaxis=list(title="x2")
+      )) %>%
       config(displayModeBar = FALSE)
   }) %>%
-    bindEvent(input$pso_2d_grid_preview)
+    bindEvent(input$pso_2d_grid_preview, r$reverse)
 
 
   observeEvent(input$pso_2d_grid_preview, {
     showModal(modalDialog(
       title = NULL,
+      awesomeCheckbox("pso_2d_grid_plot_reverse", "Fix Axis Reversed Bug", value = FALSE),
       addSpinner(plotlyOutput("pso_2d_grid_plot")),
       easyClose = T,
       size = "xl",
@@ -82,9 +193,14 @@ pso_2d_server <- function(input, output, session){
     ))
   })
 
+  observeEvent(input$pso_2d_grid_plot_reverse,{
+    isolate({
+      r$reverse <- input$pso_2d_grid_plot_reverse
+    })
+  })
+
 
   observe({
-    updateProgressBar(session = session, id = "pso_2d_settings1", value = 0)
     updateProgressBar(session = session, id = "pso_2d_settings2", value = 0)
     updateProgressBar(session = session, id = "pso_2d_settings3", value = 0)
     updateProgressBar(session = session, id = "pso_2d_settings4", value = 0)
@@ -106,7 +222,7 @@ pso_2d_server <- function(input, output, session){
         s = input$pso_2d_s, # swarm size
         c.p = input$pso_2d_coef_p, # inherit best
         c.g = input$pso_2d_coef_g, # global best
-        maxiter = r$max_iter, # iterations
+        maxiter = input$pso_2d_iter, # iterations
         w0 = input$pso_2d_inertia_weight_w0, # starting inertia weight
         wN = input$pso_2d_inertia_weight_wN # ending inertia weight
       )
@@ -133,7 +249,7 @@ pso_2d_server <- function(input, output, session){
     lower_mat <- matrix(rep(lower, ncol(X)), ncol=ncol(X))
     upper_mat <- matrix(rep(upper, ncol(X)), ncol=ncol(X))
 
-    #browser()
+
     updateProgressBar(session = session, id = "pso_2d_settings2", value = 40)
 
     save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
@@ -201,9 +317,12 @@ pso_2d_server <- function(input, output, session){
 
     updateProgressBar(session = session, id = "pso_2d_settings2", value = 80)
 
+    #save_X$fitness <- apply(save_X %>% select(axis_1, axis_2), 1, function(x){if(r$fn_const(x)==0){r$fn_fit(x)}else{NA}})
     r$save_X <- save_X
     r$save_V <- save_V
     r$save_V_raw <- save_V_raw
+
+
 
     updateProgressBar(session = session, id = "pso_2d_settings2", value = 100)
   }) #%>%
@@ -215,7 +334,9 @@ pso_2d_server <- function(input, output, session){
 
     save_X <- r$save_X
 
-    temp <- save_X %>% group_by(iter) %>% filter(fitness==min(fitness)) %>% ungroup() %>% select(iter, fitness) %>% .[!duplicated(.$iter),]
+
+
+    temp <- save_X %>% group_by(iter) %>% filter(fitness==min(fitness, na.rm = T)) %>% ungroup() %>% select(iter, fitness) %>% .[!duplicated(.$iter),]
     temp_min <- temp[temp$iter==0,]$fitness
     for(i in 1:max(temp$iter)){
       if(temp_min < temp[temp$iter==i,]$fitness){
@@ -252,10 +373,18 @@ pso_2d_server <- function(input, output, session){
     grid <- r$grid
 
     # save(save_X, save_V, save_V_raw, grid, file="test.rdata")
-    # browser()
 
 
-    plot_ly(z = ~grid, type = "contour", y = rownames(grid), x = colnames(grid), showscale = F) %>%
+
+    # plot_ly(z = ~grid, type = "contour", y = as.numeric(rownames(grid)), x = as.numeric(colnames(grid)), showscale = F) %>%
+    #   layout(
+    #     yaxis = list(showticklabels=FALSE, tickvals="", range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid)))) ),
+    #     xaxis = list(showticklabels=FALSE, tickvals="", range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid)))) ),
+    #     margin=list(r=0, b=0, l=0, t=0, pad=0)
+    #   ) %>%
+    #   html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
+
+    plot_ly(z = grid, type = "contour", y = as.numeric(rownames(grid)), x = as.numeric(colnames(grid)), showscale = F) %>%
       layout(
         yaxis = list(showticklabels=FALSE, tickvals=""),
         xaxis = list(showticklabels=FALSE, tickvals=""),
@@ -266,15 +395,15 @@ pso_2d_server <- function(input, output, session){
     image_file <- "img/p.png"
     txt <- RCurl::base64Encode(readBin(image_file, "raw", file.info(image_file)[1, "size"]), "txt")
 
-    save_X$z <- c(min(grid), rep(max(grid), nrow(save_X)-1))
+    save_X$z <- c(min(grid, na.rm = T), rep(max(grid, na.rm = T), nrow(save_X)-1))
 
     updateProgressBar(session = session, id = "pso_2d_settings3", value = 60)
 
     fig <- plot_ly() %>%
       add_trace(
         data=save_X,
-        x=~axis_2,
-        y=~axis_1,
+        x=~axis_1,
+        y=~axis_2,
         color = ~z,
         frame = ~iter,
         text = ~fitness,
@@ -331,7 +460,7 @@ pso_2d_server <- function(input, output, session){
     grid <- r$grid
 
     #save(save_X, save_V, grid, file="test.rdata")
-    #browser()
+
 
     save_X_dub <- rbind(
       save_X %>% mutate(iter=iter*2),
@@ -411,10 +540,10 @@ pso_2d_server <- function(input, output, session){
     updateProgressBar(session = session, id = "pso_2d_settings4", value = 40)
 
 
-    plot_ly(z = ~grid, type = "contour", y = rownames(grid), x = colnames(grid), showscale = F) %>%
+    plot_ly(z = ~grid, type = "contour", y = as.numeric(rownames(grid)), x = as.numeric(colnames(grid)), showscale = F) %>%
       layout(
-        yaxis = list(showticklabels=FALSE, tickvals=""),
-        xaxis = list(showticklabels=FALSE, tickvals=""),
+        yaxis = list(showticklabels=FALSE, tickvals="", range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
+        xaxis = list(showticklabels=FALSE, tickvals="", range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
       html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
@@ -422,15 +551,15 @@ pso_2d_server <- function(input, output, session){
     image_file <- "img/p.png"
     txt <- RCurl::base64Encode(readBin(image_file, "raw", file.info(image_file)[1, "size"]), "txt")
 
-    save_X_dub$z <- c(min(grid), rep(max(grid), nrow(save_X)-1))
+    save_X_dub$z <- c(min(grid, na.rm = T), rep(max(grid, na.rm = T), nrow(save_X)-1))
 
     updateProgressBar(session = session, id = "pso_2d_settings4", value = 60)
 
     fig <- plot_ly() %>%
       add_trace(
         data=save_X_dub,
-        x=~axis_2,
-        y=~axis_1,
+        x=~axis_1,
+        y=~axis_2,
         color = ~z,
         frame = ~iter,
         text = ~fitness,
@@ -442,8 +571,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
     add_trace(
       data = X_velocitys,
-      y=~axis_1,
-      x=~axis_2,
+      x=~axis_1,
+      y=~axis_2,
       #z=~fitness+fit_offset,
       frame = ~iter,
       mode ='lines',
@@ -454,8 +583,8 @@ pso_2d_server <- function(input, output, session){
     ) %>%
       add_trace(
         data = Vw,
-        y=~axis_1,
-        x=~axis_2,
+        x=~axis_1,
+        y=~axis_2,
         #z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
@@ -466,8 +595,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       add_trace(
         data = Vp,
-        y=~axis_1,
-        x=~axis_2,
+        x=~axis_1,
+        y=~axis_2,
         #z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
@@ -478,8 +607,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       add_trace(
         data = Vg,
-        y=~axis_1,
-        x=~axis_2,
+        x=~axis_1,
+        y=~axis_2,
         # z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
@@ -490,8 +619,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       add_trace(
         data = Vw_raw,
-        y=~axis_1,
-        x=~axis_2,
+        x=~axis_1,
+        y=~axis_2,
         #z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
@@ -502,8 +631,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       add_trace(
         data = Vp_raw,
-        y=~axis_1,
-        x=~axis_2,
+        x=~axis_1,
+        y=~axis_2,
         #z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
@@ -514,8 +643,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       add_trace(
         data = Vg_raw,
-        y=~axis_1,
-        x=~axis_2,
+        x=~axis_1,
+        y=~axis_2,
         # z=~fitness+fit_offset,
         frame = ~iter,
         mode ='lines',
@@ -526,8 +655,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       animation_opts(redraw=T, easing="cubic-in-out", transition = 500, frame = 700, mode="next") %>%
       layout(
-        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
-        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
+        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
+        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
         images = list(
           list(
             # Add images
@@ -550,6 +679,7 @@ pso_2d_server <- function(input, output, session){
 
     updateProgressBar(session = session, id = "pso_2d_settings4", value = 100)
 
+    #browser()
     fig
   }) %>%
     bindEvent(input$pso_2d_render_anim_details)
