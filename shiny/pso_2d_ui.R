@@ -40,6 +40,7 @@ pso_2d_ui <- function(){
     ),
     hr(),
     div(
+      awesomeRadio("pso_2d_variant", "Variants", choices = c("global best (standard)", "local", "adaptive velocity"), selected = "global best (standard)", inline = T),
       numericInput("pso_2d_iter", "Iterations:", value=20, step = 1, min = 2, max = 1000),
       numericInput("pso_2d_s", "Swarm Size:", value=5, step = 1, min = 2, max = 100),
       #numericRangeInput("pso_2d_inertia_weight", "Inertia Weight from :", value = c(0, 1.2), step = 0.05, separator = " to "),
@@ -50,6 +51,7 @@ pso_2d_ui <- function(){
       ),
       numericInput("pso_2d_coef_p", "C_p:", value=0.5, step = 0.1),
       numericInput("pso_2d_coef_g", "C_g:", value=0.5, step = 0.1),
+      hidden(numericInput("pso_2d_k", "k:", value=2, step = 1, min = 2)),
       div(style="width:300px",fluidRow(column(12,progressBar(id = "pso_2d_settings2", value = 0, display_pct = T)))),
       actionButton("pso_2d_start_pso", "Start PSO"),
       br(),

@@ -207,126 +207,268 @@ pso_2d_server <- function(input, output, session){
   }) %>%
     bindEvent(input$pso_2d_iter, input$pso_2d_s, input$pso_2d_inertia_weight_w0, input$pso_2d_inertia_weight_wN, input$pso_2d_coef_p, input$pso_2d_coef_g)
 
+
+
+  observeEvent(input$pso_2d_variant,{
+    if(input$pso_2d_variant == "global best (standard)"){
+      hide("pso_2d_k")
+    }
+    if(input$pso_2d_variant == "local"){
+      show("pso_2d_k")
+    }
+  })
+
+
   observeEvent(input$pso_2d_start_pso, {
     req(r$grid)
 
-    #updateProgressBar(session = session, id = "pso_2d_settings", value = 20)
-    isolate({
-      fn <- r$fn
 
-      lower <- r$range$lower
-      upper <- r$range$upper
+    if(input$pso_2d_variant == "global best (standard)"){
+      isolate({
+        fn <- r$fn
 
-      par <- rep(NA, 2)
-      control <- list(
-        s = input$pso_2d_s, # swarm size
-        c.p = input$pso_2d_coef_p, # inherit best
-        c.g = input$pso_2d_coef_g, # global best
-        maxiter = input$pso_2d_iter, # iterations
-        w0 = input$pso_2d_inertia_weight_w0, # starting inertia weight
-        wN = input$pso_2d_inertia_weight_wN # ending inertia weight
+        lower <- r$range$lower
+        upper <- r$range$upper
+
+        par <- rep(NA, 2)
+        control <- list(
+          s = input$pso_2d_s, # swarm size
+          c.p = input$pso_2d_coef_p, # inherit best
+          c.g = input$pso_2d_coef_g, # global best
+          maxiter = input$pso_2d_iter, # iterations
+          w0 = input$pso_2d_inertia_weight_w0, # starting inertia weight
+          wN = input$pso_2d_inertia_weight_wN # ending inertia weight
+        )
+      })
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 20)
+      X <- mrunif(
+        nr = length(par), nc=control$s, lower=lower, upper=upper
       )
-    })
-
-    updateProgressBar(session = session, id = "pso_2d_settings2", value = 20)
-    X <- mrunif(
-      nr = length(par), nc=control$s, lower=lower, upper=upper
-    )
-    if(all(!is.na(par))){
-      X[, 1] <- par
-    }
-    X_fit <- apply(X, 2, fn)
-    V <- mrunif(
-      nr = length(par), nc=control$s,
-      lower=-(upper-lower), upper=(upper-lower)
-    )/10
-
-    P <- X
-    P_fit <- X_fit
-    p_g <- P[, which.min(P_fit)]
-    p_g_fit <- min(P_fit)
-
-    lower_mat <- matrix(rep(lower, ncol(X)), ncol=ncol(X))
-    upper_mat <- matrix(rep(upper, ncol(X)), ncol=ncol(X))
-
-
-    updateProgressBar(session = session, id = "pso_2d_settings2", value = 40)
-
-    save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
-    save_V <- NULL
-    save_V_raw <- NULL
-    for(i in 1:control$maxiter){
-      Vw_raw <- V
-      Vp_raw <- (P-X)
-      Vg_raw <- (p_g-X)
-      Vw <- (control$w0-(control$w0-control$wN)*i/control$maxiter) * Vw_raw
-      Vp <- control$c.p * t(runif(ncol(X)) * t(Vp_raw))
-      Vg <- control$c.g * t(runif(ncol(X)) * t(Vg_raw))
-
-      save_V <- rbind(save_V,
-                      cbind(
-                        data.frame(
-                          "iter" = i-1,
-                          "id" = 1:ncol(X)
-                        ),
-                        setNames(data.frame(t( Vw )), paste0("Vw_", 1:2)),
-                        setNames(data.frame(t( Vp )), paste0("Vp_", 1:2)),
-                        setNames(data.frame(t( Vg )), paste0("Vg_", 1:2))
-                      )
-      )
-      save_V_raw <- rbind(save_V_raw,
-                      cbind(
-                        data.frame(
-                          "iter" = i-1,
-                          "id" = 1:ncol(X)
-                        ),
-                        setNames(data.frame(t( Vw_raw )), paste0("Vw_raw_", 1:2)),
-                        setNames(data.frame(t( Vp_raw )), paste0("Vp_raw_", 1:2)),
-                        setNames(data.frame(t( Vg_raw )), paste0("Vg_raw_", 1:2))
-                      )
-      )
-
-      # move particles
-      V <- Vw + Vp + Vg
-      X <- X + V
-
-      # set velocity to zeros if not in valid space
-      V[X > upper] <- 0
-      V[X < lower] <- 0
-
-      # move into valid space
-      X[X > upper_mat] <- upper_mat[X > upper_mat]
-      X[X < lower_mat] <- lower_mat[X < lower_mat]
-
-      # evaluate objective function
+      if(all(!is.na(par))){
+        X[, 1] <- par
+      }
       X_fit <- apply(X, 2, fn)
+      V <- mrunif(
+        nr = length(par), nc=control$s,
+        lower=-(upper-lower), upper=(upper-lower)
+      )/10
 
-      # save new previews best
-      P[, P_fit > X_fit] <- X[, P_fit > X_fit]
-      P_fit[P_fit > X_fit] <- X_fit[P_fit > X_fit]
+      P <- X
+      P_fit <- X_fit
+      p_g <- P[, which.min(P_fit)]
+      p_g_fit <- min(P_fit)
 
-      # save new global best
-      if(any(P_fit < p_g_fit)){
-        p_g <- P[, which.min(P_fit)]
-        p_g_fit <- min(P_fit)
+      lower_mat <- matrix(rep(lower, ncol(X)), ncol=ncol(X))
+      upper_mat <- matrix(rep(upper, ncol(X)), ncol=ncol(X))
+
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 40)
+
+      save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
+      save_V <- NULL
+      save_V_raw <- NULL
+      for(i in 1:control$maxiter){
+        Vw_raw <- V
+        Vp_raw <- (P-X)
+        Vg_raw <- (p_g-X)
+        Vw <- (control$w0-(control$w0-control$wN)*i/control$maxiter) * Vw_raw
+        Vp <- control$c.p * t(runif(ncol(X)) * t(Vp_raw))
+        Vg <- control$c.g * t(runif(ncol(X)) * t(Vg_raw))
+
+        save_V <- rbind(save_V,
+                        cbind(
+                          data.frame(
+                            "iter" = i-1,
+                            "id" = 1:ncol(X)
+                          ),
+                          setNames(data.frame(t( Vw )), paste0("Vw_", 1:2)),
+                          setNames(data.frame(t( Vp )), paste0("Vp_", 1:2)),
+                          setNames(data.frame(t( Vg )), paste0("Vg_", 1:2))
+                        )
+        )
+        save_V_raw <- rbind(save_V_raw,
+                            cbind(
+                              data.frame(
+                                "iter" = i-1,
+                                "id" = 1:ncol(X)
+                              ),
+                              setNames(data.frame(t( Vw_raw )), paste0("Vw_raw_", 1:2)),
+                              setNames(data.frame(t( Vp_raw )), paste0("Vp_raw_", 1:2)),
+                              setNames(data.frame(t( Vg_raw )), paste0("Vg_raw_", 1:2))
+                            )
+        )
+
+        # move particles
+        V <- Vw + Vp + Vg
+        X <- X + V
+
+        # set velocity to zeros if not in valid space
+        V[X > upper] <- 0
+        V[X < lower] <- 0
+
+        # move into valid space
+        X[X > upper_mat] <- upper_mat[X > upper_mat]
+        X[X < lower_mat] <- lower_mat[X < lower_mat]
+
+        # evaluate objective function
+        X_fit <- apply(X, 2, fn)
+
+        # save new previews best
+        P[, P_fit > X_fit] <- X[, P_fit > X_fit]
+        P_fit[P_fit > X_fit] <- X_fit[P_fit > X_fit]
+
+        # save new global best
+        if(any(P_fit < p_g_fit)){
+          p_g <- P[, which.min(P_fit)]
+          p_g_fit <- min(P_fit)
+        }
+
+
+        save_X <- rbind(save_X, data.frame("iter"=i, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X)))))
       }
 
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 80)
 
-      save_X <- rbind(save_X, data.frame("iter"=i, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X)))))
+      #save_X$fitness <- apply(save_X %>% select(axis_1, axis_2), 1, function(x){if(r$fn_const(x)==0){r$fn_fit(x)}else{NA}})
+      r$save_X <- save_X
+      r$save_V <- save_V
+      r$save_V_raw <- save_V_raw
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 100)
     }
 
-    updateProgressBar(session = session, id = "pso_2d_settings2", value = 80)
-
-    #save_X$fitness <- apply(save_X %>% select(axis_1, axis_2), 1, function(x){if(r$fn_const(x)==0){r$fn_fit(x)}else{NA}})
-    r$save_X <- save_X
-    r$save_V <- save_V
-    r$save_V_raw <- save_V_raw
 
 
+    if(input$pso_2d_variant == "local"){
+      isolate({
+        fn <- r$fn
 
-    updateProgressBar(session = session, id = "pso_2d_settings2", value = 100)
-  }) #%>%
-    #bindEvent(input$pso_2d_start_pso)
+        lower <- r$range$lower
+        upper <- r$range$upper
+
+        par <- rep(NA, 2)
+        control <- list(
+          s = input$pso_2d_s, # swarm size
+          c.p = input$pso_2d_coef_p, # inherit best
+          c.g = input$pso_2d_coef_g, # global best
+          maxiter = input$pso_2d_iter, # iterations
+          w0 = input$pso_2d_inertia_weight_w0, # starting inertia weight
+          wN = input$pso_2d_inertia_weight_wN, # ending inertia weight
+          k=2
+        )
+      })
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 20)
+      X <- mrunif(
+        nr = length(par), nc=control$s, lower=lower, upper=upper
+      )
+      if(all(!is.na(par))){
+        X[, 1] <- par
+      }
+      X_fit <- apply(X, 2, fn)
+      V <- mrunif(
+        nr = length(par), nc=control$s,
+        lower=-(upper-lower), upper=(upper-lower)
+      )/10
+
+      P <- X
+      P_fit <- X_fit
+      p_g <- P[, which.min(P_fit)]
+      p_g_fit <- min(P_fit)
+
+      lower_mat <- matrix(rep(lower, ncol(X)), ncol=ncol(X))
+      upper_mat <- matrix(rep(upper, ncol(X)), ncol=ncol(X))
+
+      neighbors <- sapply(1:control$s, function(x){ ((x+round(-control$k/2)):(x+round(control$k/2))-1) %% control$s + 1 }) %>% unique()
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 40)
+
+
+
+      save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
+      save_V <- NULL
+      save_V_raw <- NULL
+      for(i in 1:control$maxiter){
+        P_g <- matrix(1, nrow=length(par), ncol=control$s)
+        for(z in 1:ncol(P_g)){
+          P_g[, z] <- P[, neighbors[which.min(P_fit[neighbors[, z]]), z]]
+        }
+
+        Vw_raw <- V
+        Vp_raw <- (P-X)
+        Vg_raw <- (P_g-X)
+        Vw <- (control$w0-(control$w0-control$wN)*i/control$maxiter) * Vw_raw
+        Vp <- control$c.p * t(runif(ncol(X)) * t(Vp_raw))
+        Vg <- control$c.g * t(runif(ncol(X)) * t(Vg_raw))
+
+        save_V <- rbind(save_V,
+                        cbind(
+                          data.frame(
+                            "iter" = i-1,
+                            "id" = 1:ncol(X)
+                          ),
+                          setNames(data.frame(t( Vw )), paste0("Vw_", 1:2)),
+                          setNames(data.frame(t( Vp )), paste0("Vp_", 1:2)),
+                          setNames(data.frame(t( Vg )), paste0("Vg_", 1:2))
+                        )
+        )
+        save_V_raw <- rbind(save_V_raw,
+                            cbind(
+                              data.frame(
+                                "iter" = i-1,
+                                "id" = 1:ncol(X)
+                              ),
+                              setNames(data.frame(t( Vw_raw )), paste0("Vw_raw_", 1:2)),
+                              setNames(data.frame(t( Vp_raw )), paste0("Vp_raw_", 1:2)),
+                              setNames(data.frame(t( Vg_raw )), paste0("Vg_raw_", 1:2))
+                            )
+        )
+
+        # move particles
+        V <- Vw + Vp + Vg
+        X <- X + V
+
+        # set velocity to zeros if not in valid space
+        V[X > upper] <- 0
+        V[X < lower] <- 0
+
+        # move into valid space
+        X[X > upper_mat] <- upper_mat[X > upper_mat]
+        X[X < lower_mat] <- lower_mat[X < lower_mat]
+
+        # evaluate objective function
+        X_fit <- apply(X, 2, fn)
+
+        # save new previews best
+        P[, P_fit > X_fit] <- X[, P_fit > X_fit]
+        P_fit[P_fit > X_fit] <- X_fit[P_fit > X_fit]
+
+        # save new global best
+        if(any(P_fit < p_g_fit)){
+          p_g <- P[, which.min(P_fit)]
+          p_g_fit <- min(P_fit)
+        }
+
+
+        save_X <- rbind(save_X, data.frame("iter"=i, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X)))))
+      }
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 80)
+
+      #save_X$fitness <- apply(save_X %>% select(axis_1, axis_2), 1, function(x){if(r$fn_const(x)==0){r$fn_fit(x)}else{NA}})
+      r$save_X <- save_X
+      r$save_V <- save_V
+      r$save_V_raw <- save_V_raw
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 100)
+    }
+
+
+  })
+
+
+
+
 
 
   output$pso_2d_pso_plot_line <- renderPlotly({
@@ -386,8 +528,8 @@ pso_2d_server <- function(input, output, session){
 
     plot_ly(z = grid, type = "contour", y = as.numeric(rownames(grid)), x = as.numeric(colnames(grid)), showscale = F) %>%
       layout(
-        yaxis = list(showticklabels=FALSE, tickvals=""),
-        xaxis = list(showticklabels=FALSE, tickvals=""),
+        yaxis = list(showticklabels=FALSE, tickvals="", zeroline = FALSE),
+        xaxis = list(showticklabels=FALSE, tickvals="", zeroline = FALSE),
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
       config(displayModeBar = FALSE) %>%
@@ -416,8 +558,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       animation_opts(redraw=F, easing="cubic-in-out", transition = 500, frame = 700) %>%
       layout(
-        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
-        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
+        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zeroline = FALSE, zerolinecolor = '#0000', range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
+        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zeroline = FALSE, zerolinecolor = '#0000', range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
         images = list(
           list(
             # Add images
@@ -543,8 +685,8 @@ pso_2d_server <- function(input, output, session){
 
     plot_ly(z = ~grid, type = "contour", y = as.numeric(rownames(grid)), x = as.numeric(colnames(grid)), showscale = F) %>%
       layout(
-        yaxis = list(showticklabels=FALSE, tickvals="", range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
-        xaxis = list(showticklabels=FALSE, tickvals="", range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
+        yaxis = list(showticklabels=FALSE, tickvals="", zeroline = FALSE, range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
+        xaxis = list(showticklabels=FALSE, tickvals="", zeroline = FALSE, range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
       config(displayModeBar = FALSE) %>%
@@ -657,8 +799,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       animation_opts(redraw=T, easing="cubic-in-out", transition = 500, frame = 700, mode="next") %>%
       layout(
-        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
-        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
+        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zeroline = FALSE, zerolinecolor = '#0000', range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
+        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zeroline = FALSE, zerolinecolor = '#0000', range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
         images = list(
           list(
             # Add images
@@ -681,7 +823,6 @@ pso_2d_server <- function(input, output, session){
 
     updateProgressBar(session = session, id = "pso_2d_settings4", value = 100)
 
-    #browser()
     fig
   }) %>%
     bindEvent(input$pso_2d_render_anim_details)
