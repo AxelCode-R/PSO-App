@@ -1,5 +1,5 @@
 pso_2d_server <- function(input, output, session){
-  r <- reactiveValues("fn"=NULL, "range"=NULL, "resolution"=NULL, "max_iter"=NULL, "grid"=NULL, "grid_plot"=NULL, "save_X"=NULL, "reverse"=FALSE)
+  r <- reactiveValues("fn"=NULL, "range"=NULL, "resolution"=NULL, "max_iter"=NULL, "grid"=NULL, "grid_plot"=NULL, "save_X"=NULL)
 
   observe({
     updateProgressBar(session = session, id = "pso_2d_settings1", value = 0)
@@ -179,13 +179,13 @@ pso_2d_server <- function(input, output, session){
       )) %>%
       config(displayModeBar = FALSE)
   }) %>%
-    bindEvent(input$pso_2d_grid_preview, r$reverse)
+    bindEvent(input$pso_2d_grid_preview)
 
 
   observeEvent(input$pso_2d_grid_preview, {
     showModal(modalDialog(
       title = NULL,
-      awesomeCheckbox("pso_2d_grid_plot_reverse", "Fix Axis Reversed Bug", value = FALSE),
+      #awesomeCheckbox("pso_2d_grid_plot_reverse", "Fix Axis Reversed Bug", value = FALSE),
       addSpinner(plotlyOutput("pso_2d_grid_plot")),
       easyClose = T,
       size = "xl",
@@ -193,11 +193,11 @@ pso_2d_server <- function(input, output, session){
     ))
   })
 
-  observeEvent(input$pso_2d_grid_plot_reverse,{
-    isolate({
-      r$reverse <- input$pso_2d_grid_plot_reverse
-    })
-  })
+  # observeEvent(input$pso_2d_grid_plot_reverse,{
+  #   isolate({
+  #     r$reverse <- input$pso_2d_grid_plot_reverse
+  #   })
+  # })
 
 
   observe({
@@ -390,6 +390,7 @@ pso_2d_server <- function(input, output, session){
         xaxis = list(showticklabels=FALSE, tickvals=""),
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
+      config(displayModeBar = FALSE) %>%
       html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
 
     image_file <- "img/p.png"
@@ -415,8 +416,8 @@ pso_2d_server <- function(input, output, session){
       ) %>%
       animation_opts(redraw=F, easing="cubic-in-out", transition = 500, frame = 700) %>%
       layout(
-        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
-        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000'),
+        xaxis = list(title = "x1", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
+        yaxis = list(title = "x2", gridcolor = '#0000', zerolinewidth = 0, zerolinecolor = '#0000', range=c(min(as.numeric(rownames(grid))), max(as.numeric(rownames(grid))))),
         images = list(
           list(
             # Add images
@@ -546,6 +547,7 @@ pso_2d_server <- function(input, output, session){
         xaxis = list(showticklabels=FALSE, tickvals="", range=c(min(as.numeric(colnames(grid))), max(as.numeric(colnames(grid))))),
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
+      config(displayModeBar = FALSE) %>%
       html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
 
     image_file <- "img/p.png"
