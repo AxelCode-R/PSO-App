@@ -205,16 +205,32 @@ pso_2d_server <- function(input, output, session){
     updateProgressBar(session = session, id = "pso_2d_settings3", value = 0)
     updateProgressBar(session = session, id = "pso_2d_settings4", value = 0)
   }) %>%
-    bindEvent(input$pso_2d_iter, input$pso_2d_s, input$pso_2d_inertia_weight_w0, input$pso_2d_inertia_weight_wN, input$pso_2d_coef_p, input$pso_2d_coef_g)
+    bindEvent(input$pso_2d_iter, input$pso_2d_s, input$pso_2d_inertia_weight_w0, input$pso_2d_inertia_weight_wN,
+              input$pso_2d_coef_p, input$pso_2d_coef_g, input$pso_2d_variant, input$pso_2d_k)
 
 
 
   observeEvent(input$pso_2d_variant,{
     if(input$pso_2d_variant == "global best (standard)"){
       hide("pso_2d_k")
+      show("pso_2d_inertia_weight_w0")
+      show("pso_2d_inertia_weight_wN")
+      show("pso_2d_coef_p")
+      show("pso_2d_coef_g")
     }
     if(input$pso_2d_variant == "local"){
       show("pso_2d_k")
+      show("pso_2d_inertia_weight_w0")
+      show("pso_2d_inertia_weight_wN")
+      show("pso_2d_coef_p")
+      show("pso_2d_coef_g")
+    }
+    if(input$pso_2d_variant == "self-adaptive velocity"){
+      hide("pso_2d_k")
+      hide("pso_2d_inertia_weight_w0")
+      hide("pso_2d_inertia_weight_wN")
+      hide("pso_2d_coef_p")
+      hide("pso_2d_coef_g")
     }
   })
 
@@ -464,6 +480,178 @@ pso_2d_server <- function(input, output, session){
     }
 
 
+
+    if(input$pso_2d_variant == "self-adaptive velocity"){
+
+      isolate({
+        fn <- r$fn
+
+        lower <- r$range$lower
+        upper <- r$range$upper
+
+        par <- rep(NA, 2)
+        control <- list(
+          s = input$pso_2d_s, # swarm size
+          maxiter = input$pso_2d_iter, # iterations
+          Sp = 0.8,
+          Cp = 0.7
+        )
+      })
+
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 20)
+
+      # init data-structure
+      X <- mrunif(
+        nr = length(par), nc=control$s, lower=lower, upper=upper
+      )
+      if(all(!is.na(par))){
+        X[, 1] <- par
+      }
+      X_fit <- apply(X, 2, fn)
+      V <- mrunif(
+        nr = length(par), nc=control$s,
+        lower=-(upper-lower), upper=(upper-lower)
+      )/10
+      P <- X
+      P_fit <- X_fit
+      p_g <- P[, which.min(P_fit)]
+      p_g_fit <- min(P_fit)
+
+      ac_params <- data.frame("w"=rep(0.5, control$s), "c.p"=rep(2, control$s), "c.g"=rep(2, control$s))
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 40)
+
+      lower_mat <- matrix(rep(lower, ncol(X)), ncol=ncol(X))
+      upper_mat <- matrix(rep(upper, ncol(X)), ncol=ncol(X))
+
+      #browser()
+
+      save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
+      save_V <- NULL
+      save_V_raw <- NULL
+      for(i in 1:control$maxiter){
+
+        mu1 <- 0.1*(1-(i/control$maxiter)^2)+0.3
+        sig1 <- 0.1
+        mu2 <- 0.4*(1-(i/control$maxiter)^2)+0.2
+        sig2 <- 0.4
+
+        Vw_raw <- V
+        Vp_raw <- (P-X)
+        Vg_raw <- (p_g-X)
+        Vw <- V
+        Vp <- V
+        Vg <- V
+
+        for(p in 1:control$s){
+          if(runif(1) > control$Sp){
+            Vw[,p] <- ac_params[p,]$w * V[,p]
+            Vp[,p] <- ac_params[p,]$c.p * runif(1) * (P[,p]-X[,p])
+            Vg[,p] <- ac_params[p,]$c.g * runif(1) * (p_g-X[,p])
+          }else{
+            if(runif(1) < 0.5){
+              Vw[,p] <- ac_params[p,]$w * V[,p]
+              Vp[,p] <- ac_params[p,]$c.p * rcauchy(1, mu1, sig1) * (P[,p]-X[,p])
+              Vg[,p] <- ac_params[p,]$c.g * rcauchy(1, mu1, sig1) * (p_g-X[,p])
+            }else{
+              Vw[,p] <- ac_params[p,]$w * V[,p]
+              Vp[,p] <- ac_params[p,]$c.p * rcauchy(1, mu2, sig2) * (P[,p]-X[,p])
+              Vg[,p] <- ac_params[p,]$c.g * rcauchy(1, mu2, sig2) * (p_g-X[,p])
+            }
+          }
+        }
+        V <- Vw + Vp + Vg
+        X <- X + V
+
+        save_V <- rbind(save_V,
+                        cbind(
+                          data.frame(
+                            "iter" = i-1,
+                            "id" = 1:ncol(X)
+                          ),
+                          setNames(data.frame(t( Vw )), paste0("Vw_", 1:2)),
+                          setNames(data.frame(t( Vp )), paste0("Vp_", 1:2)),
+                          setNames(data.frame(t( Vg )), paste0("Vg_", 1:2))
+                        )
+        )
+        save_V_raw <- rbind(save_V_raw,
+                            cbind(
+                              data.frame(
+                                "iter" = i-1,
+                                "id" = 1:ncol(X)
+                              ),
+                              setNames(data.frame(t( Vw_raw )), paste0("Vw_raw_", 1:2)),
+                              setNames(data.frame(t( Vp_raw )), paste0("Vp_raw_", 1:2)),
+                              setNames(data.frame(t( Vg_raw )), paste0("Vg_raw_", 1:2))
+                            )
+        )
+
+
+
+        upper_breaks <- X > upper_mat
+        ub_ind <- which(upper_breaks==T, arr.ind = T)
+        if(nrow(ub_ind)>0){
+          for(k in 1:nrow(ub_ind)){
+            if(runif(1) > control$Cp){
+              X[ub_ind[k,1],ub_ind[k,2]] <- runif(1, lower_mat[ub_ind[k,1], ub_ind[k,2]], upper_mat[ub_ind[k,1], ub_ind[k,2]])
+            }else{
+              X[ub_ind[k,1],ub_ind[k,2]] <- upper_mat[ub_ind[k,1], ub_ind[k,2]]
+            }
+          }
+        }
+
+        lower_breaks <- X < lower_mat
+        lb_ind <- which(lower_breaks==T, arr.ind = T)
+        if(nrow(lb_ind)>0){
+          for(k in 1:nrow(lb_ind)){
+            if(runif(1) > control$Cp){
+              X[lb_ind[k,1],lb_ind[k,2]] <- runif(1, lower_mat[lb_ind[k,1], lb_ind[k,2]], upper_mat[lb_ind[k,1], lb_ind[k,2]])
+            }else{
+              X[lb_ind[k,1],lb_ind[k,2]] <- lower_mat[lb_ind[k,1], lb_ind[k,2]]
+            }
+          }
+        }
+
+
+        # evaluate objective function
+        X_fit <- apply(X, 2, fn)
+
+        max_fit <- max(X_fit)
+        WG <- abs(X_fit-max_fit)/sum(abs(X_fit-max_fit))
+        ac_params$w <- rcauchy(control$s, sum(WG*ac_params$w), 0.2)
+        ac_params$c.p <- rcauchy(control$s, sum(WG*ac_params$c.p), 0.3)
+        ac_params$c.g <- rcauchy(control$s, sum(WG*ac_params$c.g), 0.3)
+
+        ac_params$w[ac_params$w > 1] <- runif(1)
+        ac_params$w[ac_params$w < 0] <- runif(1)/10
+
+        ac_params$c.p[ac_params$c.p > 4] <- runif(1)*4
+        ac_params$c.p[ac_params$c.p < 0] <- runif(1)
+
+        ac_params$c.g[ac_params$c.g > 4] <- runif(1)*4
+        ac_params$c.g[ac_params$c.g < 0] <- runif(1)
+
+
+        # save new previews best
+        P[, P_fit > X_fit] <- X[, P_fit > X_fit]
+        P_fit[P_fit > X_fit] <- X_fit[P_fit > X_fit]
+
+        # save new global best
+        if(any(P_fit < p_g_fit)){
+          p_g <- P[, which.min(P_fit)]
+          p_g_fit <- min(P_fit)
+        }
+
+        save_X <- rbind(save_X, data.frame("iter"=i, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X)))))
+      }
+
+      updateProgressBar(session = session, id = "pso_2d_settings2", value = 80)
+
+      r$save_X <- save_X
+      r$save_V <- save_V
+      r$save_V_raw <- save_V_raw
+    }
   })
 
 
