@@ -1,3 +1,3 @@
 home_ui <- function(){
-  p("hallo")
+  tags$img(src = "/img/birds.jpg")
 }

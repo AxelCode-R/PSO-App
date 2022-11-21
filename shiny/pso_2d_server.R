@@ -485,6 +485,7 @@ pso_2d_server <- function(input, output, session){
 
       isolate({
         fn <- r$fn
+        fn_const <- r$fn_const
 
         lower <- r$range$lower
         upper <- r$range$upper
@@ -616,9 +617,17 @@ pso_2d_server <- function(input, output, session){
 
         # evaluate objective function
         X_fit <- apply(X, 2, fn)
+        X_const <- apply(X, 2, fn_const)
+        X_fit_temp <- X_fit
 
-        max_fit <- max(X_fit)
-        WG <- abs(X_fit-max_fit)/sum(abs(X_fit-max_fit))
+        if(!all(X_const!=0)){
+          max_fit <- max(X_fit_temp[X_const==0])
+          X_fit_temp[X_const!=0] <- max_fit
+          WG <- abs(X_fit_temp-max_fit)/sum(abs(X_fit_temp-max_fit))
+        }else{
+          max_fit <- max(X_fit_temp)
+          WG <- abs(X_fit_temp-max_fit)/sum(abs(X_fit_temp-max_fit))
+        }
         ac_params$w <- rcauchy(control$s, sum(WG*ac_params$w), 0.2)
         ac_params$c.p <- rcauchy(control$s, sum(WG*ac_params$c.p), 0.3)
         ac_params$c.g <- rcauchy(control$s, sum(WG*ac_params$c.g), 0.3)
