@@ -45,7 +45,13 @@ pso_2d_server <- function(input, output, session){
     updateNumericRangeInput(session, "pso_2d_range_x2", value=c(-1, 1))
   })
 
-
+  observeEvent(input$pso_2d_fun_no_convergence,{
+    updateTextAreaInput(session, "pso_2d_fun_fit",
+                        value="(x1^2+x2^2)/(x1^4+x2^4+1)")
+    updateTextAreaInput(session, "pso_2d_fun_const", value="0")
+    updateNumericRangeInput(session, "pso_2d_range_x1", value=c(-10, 10))
+    updateNumericRangeInput(session, "pso_2d_range_x2", value=c(-10, 10))
+  })
 
   observeEvent(input$pso_2d_save_settings,{
     req(input$pso_2d_fun_fit)
@@ -730,7 +736,7 @@ pso_2d_server <- function(input, output, session){
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
       config(displayModeBar = FALSE) %>%
-      html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
+      html_save(., zoom = 1, vheight = NULL, vwidth = NULL, selector = ".cartesianlayer")
 
     image_file <- "img/p.png"
     txt <- RCurl::base64Encode(readBin(image_file, "raw", file.info(image_file)[1, "size"]), "txt")
@@ -887,7 +893,7 @@ pso_2d_server <- function(input, output, session){
         margin=list(r=0, b=0, l=0, t=0, pad=0)
       ) %>%
       config(displayModeBar = FALSE) %>%
-      html_save(., zoom = 1, vheight = NULL, vwidth = NULL)
+      html_save(., zoom = 1, vheight = NULL, vwidth = NULL, selector = ".cartesianlayer")
 
     image_file <- "img/p.png"
     txt <- RCurl::base64Encode(readBin(image_file, "raw", file.info(image_file)[1, "size"]), "txt")

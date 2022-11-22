@@ -11,7 +11,8 @@ pso_2d_ui <- function(){
       actionButton("pso_2d_fun_drop_wave", "DROP-WAVE"),
       actionButton("pso_2d_fun_ackley", "ACKLEY"),
       actionButton("pso_2d_fun_rosenbrock", "Rosenbrock constraint cubic and line"),
-      actionButton("pso_2d_fun_gole", "Gomez and Levy constraint")
+      actionButton("pso_2d_fun_gole", "Gomez and Levy constraint"),
+      actionButton("pso_2d_fun_no_convergence", "No Convergence")
     ),
     div(
       textAreaInput(
