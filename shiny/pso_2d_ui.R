@@ -18,7 +18,7 @@ pso_2d_ui <- function(){
       textAreaInput(
         "pso_2d_fun_fit",
         "R Function to Minimize (with x1 and x2 variables):",
-         value="-20*exp(-0.2*sqrt(0.5*(x1^2+x2^2)))-
+         value="-20*exp(-0.2*sqrt(0.5*((x1-1)^2+(x2-1)^2)))-
                   exp(0.5*(cos(2*pi*x1)+cos(2*pi*x2)))+
                   exp(1)+20",
         width=600,
