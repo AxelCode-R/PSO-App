@@ -1,0 +1,13 @@
+name: PSO-App
+title: PSO-App
+username:
+account: edjut-all
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7757282
+bundleId: 6566366
+url: https://edjut-all.shinyapps.io/PSO-App/
+when: 1669708525.66486
+lastSyncTime: 1669708525.66489
+asMultiple: FALSE
+asStatic: FALSE
