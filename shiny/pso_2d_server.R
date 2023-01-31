@@ -537,6 +537,14 @@ pso_2d_server <- function(input, output, session){
       save_X <- data.frame("iter"=0, "id"= 1:ncol(X), "fitness"=X_fit, setNames(data.frame(t(X)), paste0("axis_",1:nrow(X))))
       save_V <- NULL
       save_V_raw <- NULL
+
+      # rnd_seed <- runif(1)
+      #
+      # save(rnd_seed, fn, fn_const, lower, upper, control, par, X, X_fit, V, P, P_fit, p_g, p_g_fit,
+      #      ac_params, lower_mat, upper_mat, save_X, save_V, save_V_raw, file="testsave.rdata")
+      #
+      # set.seed(rnd_seed)
+
       for(i in 1:control$maxiter){
 
         mu1 <- 0.1*(1-(i/control$maxiter)^2)+0.3
@@ -629,7 +637,11 @@ pso_2d_server <- function(input, output, session){
         if(!all(X_const!=0)){
           max_fit <- max(X_fit_temp[X_const==0])
           X_fit_temp[X_const!=0] <- max_fit
-          WG <- abs(X_fit_temp-max_fit)/sum(abs(X_fit_temp-max_fit))
+          if(sum(abs(X_fit_temp-max_fit))==0){
+            WG <- rep(1/length(X_fit_temp), length(X_fit_temp))
+          }else{
+            WG <- abs(X_fit_temp-max_fit)/sum(abs(X_fit_temp-max_fit))
+          }
         }else{
           max_fit <- max(X_fit_temp)
           WG <- abs(X_fit_temp-max_fit)/sum(abs(X_fit_temp-max_fit))

@@ -42,13 +42,13 @@ pso_2d_ui <- function(){
     hr(),
     div(
       awesomeRadio("pso_2d_variant", "Variants", choices = c("global best (standard)", "local", "self-adaptive velocity"), selected = "global best (standard)", inline = T),
-      numericInput("pso_2d_iter", "Iterations:", value=20, step = 1, min = 2, max = 1000),
+      numericInput("pso_2d_iter", "Iterations:", value=50, step = 1, min = 2, max = 1000),
       numericInput("pso_2d_s", "Swarm Size:", value=5, step = 1, min = 2, max = 100),
       #numericRangeInput("pso_2d_inertia_weight", "Inertia Weight from :", value = c(0, 1.2), step = 0.05, separator = " to "),
       div( style="display: flex;",
-        numericInput("pso_2d_inertia_weight_w0", "Inertia Weight from :", value=1.2, step = 0.05, width = 150),
+        numericInput("pso_2d_inertia_weight_w0", "Inertia Weight from :", value=1, step = 0.05, width = 150),
         br(),
-        numericInput("pso_2d_inertia_weight_wN", "  to :", value=0, step = 0.05, width=150)
+        numericInput("pso_2d_inertia_weight_wN", "  to :", value=0.2, step = 0.05, width=150)
       ),
       numericInput("pso_2d_coef_p", "C_p:", value=0.5, step = 0.1),
       numericInput("pso_2d_coef_g", "C_g:", value=0.5, step = 0.1),
