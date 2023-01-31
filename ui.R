@@ -20,6 +20,9 @@ shinyUI(dashboardPage(
       ),
       tabItem(tabName = "pso_2d",
         pso_2d_ui()
+      ),
+      tabItem(tabName = "example_sharp_ratio",
+        example_sh_ui()
       )
     )
   )

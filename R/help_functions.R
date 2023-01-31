@@ -12,3 +12,10 @@ html_save <- function(html_chart, zoom = 4, vheight = 300, vwidth = 600, delay =
       webshot2::webshot("img/p.html", "img/p.png", delay=delay, zoom=zoom, vheight=vheight, vwidth = vwidth, expand = expand, ...)
     })
 }
+
+assl <- function(...){
+  attribut_list <- list(...)
+  for(x in names(attribut_list)[names(attribut_list) != ""]){
+    assign(x,attribut_list[[x]], envir = .GlobalEnv)
+  }
+}

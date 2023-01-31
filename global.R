@@ -13,6 +13,12 @@ library(webshot2)
 library(shinyjs)
 library(RCurl)
 
+library(lubridate)
+library(rhandsontable)
+library(data.table)
+library(xts)
+library(Matrix)
+
 options(scipen=999)
 
 for(src in list.files("R/")){
