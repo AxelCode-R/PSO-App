@@ -18,6 +18,14 @@ home_ui <- function(){
     p("This app allows the user to test different variants of the PSO with their own 2D test functions and constraints.
       The results are animated in a 2D representation and the optimization parameters can be adjusted."),
     br(),
-    p("I hope you have fun playing around with the PSO and learn more about its capabilities and behavior in the process!")
+    p("I hope you have fun playing around with the PSO and learn more about its capabilities and behavior in the process!"),
+    br(),
+    br(),
+    p("If you want to know more about the PSO, you can have a look at my Master-Thesis at:"),
+    a("GitHub", href="https://github.com/AxelCode-R/Asset-Allocation-using-Particle-Swarm-Optimization-in-R"),
+    br(),
+    a("Master-Thesis", href="https://axelcode-r.github.io/Asset-Allocation-using-Particle-Swarm-Optimization-in-R/"),
+    br(),
+    a("Master-Thesis (PDF)", href="https://axelcode-r.github.io/Asset-Allocation-using-Particle-Swarm-Optimization-in-R/Master_Thesis.pdf")
   )
 }
